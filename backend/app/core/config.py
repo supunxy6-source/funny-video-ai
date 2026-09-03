@@ -88,9 +88,9 @@ class Settings(BaseSettings):
 
     # ── Voice / TTS ────────────────────────────────────
     elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel
+    elevenlabs_voice_id: str = "pNInz6obpgDQG4ZlmEQk"  # Adam (Viral Comedy Narrator)
     elevenlabs_model: str = "eleven_multilingual_v2"
-    edge_tts_voice: str = "en-US-GuyNeural"  # Casual male comedy narrator
+    edge_tts_voice: str = "en-US-ChristopherNeural"  # Expressive comedy narrator
 
     # ── Video Format (Dual: Shorts 9:16 + Regular 16:9) ─
     video_format: str = "shorts"

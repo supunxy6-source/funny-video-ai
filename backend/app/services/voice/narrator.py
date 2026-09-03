@@ -232,23 +232,40 @@ class VoiceNarrator:
             return None
 
     def _get_voice_settings(self, scene_type: str) -> dict:
-        """Get voice settings tuned for the scene type."""
-        base = {
-            "stability": 0.71,
-            "similarity_boost": 0.75,
-            "style": 0.0,
-            "use_speaker_boost": True,
-        }
-
-        overrides = {
-            "hook": {"stability": 0.50, "style": 0.50},
-            "intro": {"stability": 0.70, "style": 0.1},
-            "facts": {"stability": 0.80, "style": 0.0},
-            "context": {"stability": 0.75, "style": 0.1},
-            "impact": {"stability": 0.60, "style": 0.40},
-            "conclusion": {"stability": 0.72, "style": 0.15},
-            "cta": {"stability": 0.65, "style": 0.25},
-        }
+        """Get voice settings tuned for the scene type and content mode."""
+        mode = getattr(settings, "content_mode", "entertainment")
+        if mode == "entertainment":
+            # Expressive, dynamic comedy delivery (allows laughter and sarcastic inflection)
+            base = {
+                "stability": 0.45,
+                "similarity_boost": 0.80,
+                "style": 0.45,
+                "use_speaker_boost": True,
+            }
+            overrides = {
+                "hook": {"stability": 0.35, "style": 0.55},
+                "comedy_body": {"stability": 0.42, "style": 0.45},
+                "punchline": {"stability": 0.38, "style": 0.50},
+                "loop_bridge": {"stability": 0.40, "style": 0.50},
+                "intro": {"stability": 0.45, "style": 0.40},
+                "cta": {"stability": 0.40, "style": 0.45},
+            }
+        else:
+            base = {
+                "stability": 0.71,
+                "similarity_boost": 0.75,
+                "style": 0.0,
+                "use_speaker_boost": True,
+            }
+            overrides = {
+                "hook": {"stability": 0.50, "style": 0.50},
+                "intro": {"stability": 0.70, "style": 0.1},
+                "facts": {"stability": 0.80, "style": 0.0},
+                "context": {"stability": 0.75, "style": 0.1},
+                "impact": {"stability": 0.60, "style": 0.40},
+                "conclusion": {"stability": 0.72, "style": 0.15},
+                "cta": {"stability": 0.65, "style": 0.25},
+            }
 
         if scene_type in overrides:
             base.update(overrides[scene_type])
