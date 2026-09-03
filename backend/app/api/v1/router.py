@@ -1,5 +1,5 @@
 """
-AI News Studio — API v1 Router
+Stateside Smiles — API v1 Router
 
 Aggregates all endpoint modules into a single router.
 """

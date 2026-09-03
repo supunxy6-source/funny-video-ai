@@ -1,5 +1,5 @@
 """
-AI News Studio — Chart Generator
+Stateside Smiles — Chart Generator
 
 Generates data visualizations (charts, graphs) for statistics
 mentioned in news scripts using matplotlib.

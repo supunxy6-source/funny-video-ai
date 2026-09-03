@@ -1,5 +1,5 @@
 """
-AI News Studio — Application Configuration
+Stateside Smiles — Application Configuration
 
 Centralized settings management using pydantic-settings.
 All configuration is loaded from environment variables with sensible defaults.
@@ -23,16 +23,21 @@ class Settings(BaseSettings):
     )
 
     # ── Application ────────────────────────────────────
-    app_name: str = "AI News Studio"
+    app_name: str = "Stateside Smiles"
     app_env: Literal["development", "staging", "production"] = "development"
     debug: bool = False
     secret_key: str = "change-me-to-a-random-64-char-string"
     api_v1_prefix: str = "/api/v1"
 
+    # ── Content Mode ──────────────────────────────────
+    content_mode: str = "entertainment"  # entertainment | news
+    meme_style: str = "mixed"  # compilation | voiceover | mixed
+    reddit_subreddits: str = "funny,memes,dankmemes,wholesomememes,facepalm,MadeMeSmile,me_irl,meirl"
+
     # ── Database ───────────────────────────────────────
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    postgres_db: str = "ai_news_studio"
+    postgres_db: str = "stateside_smiles"
     postgres_user: str = "ainews"
     postgres_password: str = "changeme"
 
@@ -83,21 +88,25 @@ class Settings(BaseSettings):
 
     # ── Voice / TTS ────────────────────────────────────
     elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel (Female)
+    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel
     elevenlabs_model: str = "eleven_multilingual_v2"
-    edge_tts_voice: str = "en-US-AriaNeural"  # Professional female news anchor tone
+    edge_tts_voice: str = "en-US-GuyNeural"  # Casual male comedy narrator
 
-    # ── Video Format (YouTube Shorts 9:16) ─────────────
+    # ── Video Format (Dual: Shorts 9:16 + Regular 16:9) ─
     video_format: str = "shorts"
+    video_format_shorts: bool = True
+    video_format_regular: bool = True
     video_width: int = 1080
     video_height: int = 1920
     video_aspect_ratio: str = "9:16"
+    regular_video_width: int = 1920
+    regular_video_height: int = 1080
 
     # ── YouTube ────────────────────────────────────────
     youtube_client_secrets_file: str = "config/client_secrets.json"
     youtube_token_file: str = "config/youtube_token.json"
     youtube_playlist_id: str = ""
-    youtube_category_id: str = "25"  # News & Politics
+    youtube_category_id: str = "23"  # Comedy
     youtube_auto_publish: bool = True  # Automatically publish generated videos to YouTube
     youtube_default_privacy: str = "public"  # public | unlisted | private
 
@@ -117,14 +126,14 @@ class Settings(BaseSettings):
     pipeline_schedule_minute: int = 0
     pipeline_schedule_hours: str = "8,12,16,20"  # Comma-separated hours for daily multi-slot schedule
     pipeline_timezone: str = "UTC"
-    news_discovery_interval_minutes: int = 60
+    content_discovery_interval_minutes: int = 120
 
     # ── Notifications ──────────────────────────────────
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
-    smtp_from: str = "noreply@ainewsstudio.com"
+    smtp_from: str = "noreply@statesidesmiles.com"
     notification_email: str = ""
     slack_webhook_url: str = ""
 
@@ -145,7 +154,7 @@ class Settings(BaseSettings):
         return path
 
     # ── Admin ──────────────────────────────────────────
-    admin_email: str = "admin@ainewsstudio.com"
+    admin_email: str = "admin@statesidesmiles.com"
     admin_password: str = "changeme"
 
     # ── JWT ────────────────────────────────────────────

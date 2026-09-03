@@ -1,5 +1,5 @@
 """
-AI News Studio — Security Module
+Stateside Smiles — Security Module
 
 JWT token creation, verification, and password hashing utilities
 for admin dashboard authentication.

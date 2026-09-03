@@ -1,1 +1,1 @@
-# AI News Studio — Backend Package
+# Stateside Smiles — Backend Package

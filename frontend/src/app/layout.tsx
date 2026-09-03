@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AI News Studio — Autonomous AI Video Platform',
-  description: 'Fully autonomous AI News Video platform that discovers, writes, edits, and publishes news videos to YouTube daily.',
+  title: 'Stateside Smiles — AI Comedy Video Platform',
+  description: 'Fully autonomous AI entertainment platform that discovers trending memes, writes comedy scripts, edits videos, and publishes to YouTube daily.',
 };
 
 export default function RootLayout({

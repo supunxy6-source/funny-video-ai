@@ -1,5 +1,5 @@
 """
-AI News Studio — Thumbnail Generator (Views-Optimized Edition)
+Stateside Smiles — Thumbnail Generator (Views-Optimized Edition)
 
 Generates multiple YouTube thumbnail variants using FLUX/SDXL,
 composites aggressive text overlays with Pillow, scores predicted CTR

@@ -1,5 +1,5 @@
 """
-AI News Studio — Script Prompts (YouTube Shorts Edition — 2026 Algorithm Optimized)
+Stateside Smiles — Script Prompts (YouTube Shorts Edition — 2026 Algorithm Optimized)
 
 System prompts and templates for LLM-based YouTube Shorts script generation.
 Enforces seamless looping, maximum retention, factuality, vertical 9:16 framing,

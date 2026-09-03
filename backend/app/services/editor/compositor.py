@@ -1,5 +1,5 @@
 """
-AI News Studio — Video Compositor (2026 Algorithm Optimized)
+Stateside Smiles — Video Compositor (2026 Algorithm Optimized)
 
 Assembles the final video from scene videos, narration audio,
 burned-in kinetic captions, text overlay hooks, and transitions
@@ -58,14 +58,21 @@ logger = logging.getLogger(__name__)
 class VideoCompositor:
     """Assembles the final video from scene assets — 2026 algorithm optimized."""
 
-    def __init__(self):
+    def __init__(self, video_format: str = None):
         self.output_dir = Path(settings.generated_dir) / "videos"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir = Path(settings.generated_dir) / "temp"
         self.temp_dir.mkdir(parents=True, exist_ok=True)
-        self.width = VIDEO_CONFIG["width"]
-        self.height = VIDEO_CONFIG["height"]
-        self.fps = VIDEO_CONFIG["fps"]
+        self.video_format = video_format or getattr(settings, "video_format", "shorts")
+        if self.video_format == "regular":
+            self.width = getattr(settings, "regular_video_width", 1920)
+            self.height = getattr(settings, "regular_video_height", 1080)
+            self.fps = 30
+        else:
+            self.width = VIDEO_CONFIG["width"]
+            self.height = VIDEO_CONFIG["height"]
+            self.fps = VIDEO_CONFIG["fps"]
+        self.content_mode = getattr(settings, "content_mode", "entertainment")
 
     def _get_font(self, size: int, bold: bool = True):
         """Get best available system font for Pillow rendering."""
@@ -383,11 +390,14 @@ class VideoCompositor:
 
         # Card header badge
         font_badge = self._get_font(28, bold=True)
-        draw.rounded_rectangle([(card_x1 + 40, card_y1 + 45), (card_x1 + 300, card_y1 + 100)], radius=12, fill=(0, 180, 216))
-        draw.text((card_x1 + 60, card_y1 + 58), "NEWS COVERAGE", font=font_badge, fill=(255, 255, 255))
+        badge_color = (245, 158, 11) if self.content_mode == "entertainment" else (0, 180, 216)
+        draw.rounded_rectangle([(card_x1 + 40, card_y1 + 45), (card_x1 + 320, card_y1 + 100)], radius=12, fill=badge_color)
+        badge_text = "STATESIDE SMILES" if self.content_mode == "entertainment" else "NEWS COVERAGE"
+        draw.text((card_x1 + 60, card_y1 + 58), badge_text, font=font_badge, fill=(255, 255, 255))
 
         # Topic Title
-        clean_title = title.strip() or "Global News Update"
+        fallback_title = "Stateside Smiles Comedy" if self.content_mode == "entertainment" else "Global News Update"
+        clean_title = title.strip() or fallback_title
         font_title = self._get_font(48, bold=True)
         lines = self._wrap_text(clean_title, max_chars=26)[:4]
         for idx, line in enumerate(lines):
@@ -469,13 +479,14 @@ async def compose_video(script_id: int) -> int:
 
     Returns the video ID.
     """
-    compositor = VideoCompositor()
-
     async with async_session_factory() as db:
         # Fetch script
         script = await db.get(Script, script_id)
         if not script:
             raise ValueError(f"Script {script_id} not found")
+
+        video_format = getattr(script, "video_format", "") or getattr(settings, "video_format", "shorts")
+        compositor = VideoCompositor(video_format=video_format)
 
         # Fetch scenes
         result = await db.execute(

@@ -1,5 +1,5 @@
 """
-AI News Studio — Models Package
+Stateside Smiles — Models Package
 
 Import all models here so Alembic and the application can discover them.
 """

@@ -1,5 +1,5 @@
 """
-AI News Studio — FastAPI Application
+Stateside Smiles — FastAPI Application
 
 Main entry point for the API server.
 """

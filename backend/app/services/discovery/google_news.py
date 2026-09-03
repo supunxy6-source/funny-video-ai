@@ -1,5 +1,5 @@
 """
-AI News Studio — Google News Scraper
+Stateside Smiles — Google News Scraper
 
 Supplements RSS discovery with trending topics from Google News.
 """

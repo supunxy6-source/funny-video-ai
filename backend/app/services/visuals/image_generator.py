@@ -1,5 +1,5 @@
 """
-AI News Studio — Multi-Engine Image Generator
+Stateside Smiles — Multi-Engine Image Generator
 
 Generates high-quality news visuals using:
 1. Free AI Image Generation (Pollinations AI — FLUX.1 & Turbo)
@@ -511,11 +511,13 @@ class ImageGenerator:
 
         # 8. Live Status Pill
         font_status = _get_font(22, bold=False)
+        mode = getattr(settings, "content_mode", "entertainment")
+        status_text = "😄 STATESIDE SMILES • VIRAL COMEDY & MEMES" if mode == "entertainment" else "● VERIFIED JOURNALISTIC COVERAGE & FIELD REPORTS"
         draw.text(
             (card_x1 + 40, card_y2 - 130),
-            "● VERIFIED JOURNALISTIC COVERAGE & FIELD REPORTS",
+            status_text,
             font=font_status,
-            fill=(176, 190, 197),
+            fill=(245, 158, 11) if mode == "entertainment" else (176, 190, 197),
         )
 
         img.save(str(file_path), "JPEG", quality=92)
@@ -526,7 +528,7 @@ class ImageGenerator:
 async def generate_scene_images(script_id: int) -> list[str]:
     """
     Main image generation entry point called by Celery task.
-    Generates high-quality AI images and news visuals for all scenes.
+    Generates high-quality AI images and visuals for all scenes.
 
     Returns list of generated image file paths.
     """
@@ -557,8 +559,13 @@ async def generate_scene_images(script_id: int) -> list[str]:
         )
         scenes = result.scalars().all()
 
+        mode = getattr(settings, "content_mode", "entertainment")
         for idx, scene in enumerate(scenes):
-            prompt = scene.visual_prompt or f"Editorial news photography of {scene.title or (script.title if script else 'breaking news')}"
+            if mode == "entertainment":
+                default_prompt = f"Vibrant hilarious comedy meme visual of {scene.title or (script.title if script else 'funny viral moments')}, colorful and eye-catching"
+            else:
+                default_prompt = f"Editorial news photography of {scene.title or (script.title if script else 'breaking news')}"
+            prompt = scene.visual_prompt or default_prompt
             clean_title = scene.title or (script.title if script else "")
 
             # Match with an article if available

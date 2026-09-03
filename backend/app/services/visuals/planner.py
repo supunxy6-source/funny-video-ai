@@ -1,5 +1,5 @@
 """
-AI News Studio — Visual Planner
+Stateside Smiles — Visual Planner
 
 Analyzes script scenes and plans visual assets: AI-generated images,
 charts, maps, animations, and stock footage suggestions.

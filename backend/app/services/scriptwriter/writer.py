@@ -1,8 +1,9 @@
 """
-AI News Studio — Script Writer
+Stateside Smiles — Script Writer
 
-LLM-powered professional news script generation with multi-provider
+LLM-powered script generation with multi-provider
 support (OpenAI, Anthropic, Google) and automatic fallback.
+Supports both entertainment (comedy/meme) and news content modes.
 """
 
 import json
@@ -267,12 +268,181 @@ def get_llm_client(provider: str = None) -> LLMClient:
 
 
 class ScriptWriter:
-    """Generates professional news scripts from verified article clusters."""
+    """Generates scripts from verified story clusters or entertainment content."""
 
     def __init__(self, provider: str = None):
         self.llm = LLMClient(provider)
+        self.content_mode = getattr(settings, "content_mode", "entertainment")
 
     async def generate_script(self, story: dict) -> dict:
+        """
+        Generate a complete video script.
+        Routes to entertainment or news script generation based on content_mode.
+
+        Args:
+            story: Dict containing content data (articles, memes, jokes, etc.)
+
+        Returns:
+            Dict with script data ready for database insertion
+        """
+        if self.content_mode == "entertainment":
+            return await self._generate_entertainment_script(story)
+        return await self._generate_news_script(story)
+
+    async def _generate_entertainment_script(self, story: dict) -> dict:
+        """
+        Generate a comedy/entertainment script from trending content.
+        """
+        from app.services.scriptwriter.entertainment_prompts import (
+            ENTERTAINMENT_SYSTEM_PROMPT,
+            SHORTS_ENTERTAINMENT_PROMPT,
+            REGULAR_VIDEO_PROMPT,
+            MEME_COMPILATION_PROMPT,
+        )
+
+        articles = story.get("articles", [])
+        if not articles:
+            raise ValueError("No content provided for script generation")
+
+        # Build content text for the prompt
+        content_text = self._format_entertainment_content(articles)
+        content_type = self._determine_content_type(articles)
+
+        # Determine video format (Shorts vs Regular)
+        video_format = story.get("video_format", "shorts")
+
+        # Select the right prompt
+        if video_format == "regular":
+            prompt = REGULAR_VIDEO_PROMPT.format(
+                content_text=content_text,
+            )
+        elif content_type == "meme":
+            prompt = MEME_COMPILATION_PROMPT.format(
+                content_text=content_text,
+                video_format=video_format,
+            )
+        else:
+            prompt = SHORTS_ENTERTAINMENT_PROMPT.format(
+                content_text=content_text,
+                content_type=content_type,
+            )
+
+        topic_summary = story.get("top_headline", "") or articles[0].get("headline", "Funny Content")
+        logger.info(f"😂 Generating {video_format} comedy script for: {topic_summary[:80]}...")
+
+        try:
+            response = await self.llm.generate(
+                prompt=prompt,
+                system_prompt=ENTERTAINMENT_SYSTEM_PROMPT,
+                max_tokens=4096,
+                temperature=0.8,  # Slightly higher for comedy creativity
+            )
+        except Exception as e:
+            logger.warning(f"Failed to generate script via LLM: {e}. Using fallback.")
+            response = self._generate_entertainment_fallback(story)
+
+        # Parse the structured response
+        script_data = self._parse_script_response(response)
+
+        # Calculate metrics
+        full_text = " ".join(s["text"] for s in script_data.get("scenes", []))
+        word_count = len(full_text.split())
+        duration_estimate = word_count / 150.0  # ~150 WPM
+
+        article_ids = [a.get("id") for a in articles if a.get("id")]
+
+        raw_title = script_data.get("title", topic_summary[:100])
+        clean_title = sanitize_title(raw_title)
+
+        result = {
+            "title": clean_title,
+            "topic_summary": topic_summary,
+            "content": full_text,
+            "content_json": json.dumps(script_data),
+            "article_ids": json.dumps(article_ids),
+            "word_count": word_count,
+            "duration_estimate": round(duration_estimate, 1),
+            "llm_provider": self.llm.provider,
+            "llm_model": self._get_model_name(),
+            "scenes": script_data.get("scenes", []),
+        }
+
+        logger.info(
+            f"✅ Comedy script generated: '{result['title']}' "
+            f"({word_count} words, ~{result['duration_estimate']} min)"
+        )
+
+        return result
+
+    def _format_entertainment_content(self, articles: list[dict]) -> str:
+        """Format entertainment content items for the LLM prompt."""
+        parts = []
+        for i, item in enumerate(articles[:10], 1):
+            source = item.get("source", "reddit")
+            content_type = item.get("content_type", "post")
+            parts.append(
+                f"[Item {i} — {source}/{content_type}]\n"
+                f"Title: {item.get('headline', item.get('title', 'N/A'))}\n"
+                f"Content: {item.get('summary', item.get('selftext', ''))[:500]}\n"
+                f"Category: {item.get('category', 'entertainment')}\n"
+                f"Virality: {item.get('virality_score', 'N/A')}\n"
+            )
+        return "\n---\n".join(parts)
+
+    def _determine_content_type(self, articles: list[dict]) -> str:
+        """Determine the dominant content type from articles."""
+        type_counts = {}
+        for a in articles:
+            ct = a.get("content_type", a.get("category", "general"))
+            type_counts[ct] = type_counts.get(ct, 0) + 1
+        if type_counts:
+            return max(type_counts, key=type_counts.get)
+        return "mixed"
+
+    def _generate_entertainment_fallback(self, story: dict) -> str:
+        """Generate fallback comedy script when LLM fails."""
+        articles = story.get("articles", [])
+        today = datetime.now(timezone.utc).strftime("%B %d, %Y")
+
+        title = "The Funniest Things on the Internet Today"
+        if articles:
+            first_title = articles[0].get("headline", articles[0].get("title", ""))
+            if first_title:
+                title = first_title[:50]
+
+        scenes = [
+            {
+                "order": 1,
+                "scene_type": "hook",
+                "title": "Hook",
+                "text": "Okay I need everyone to see this right now.",
+                "visual_prompt": "Colorful meme-style graphic with shocked face emoji, vibrant gradient background, vertical 9:16",
+                "visual_type": "image",
+                "text_overlay": ""
+            },
+            {
+                "order": 2,
+                "scene_type": "comedy_body",
+                "title": "The Content",
+                "text": "The internet never disappoints. Check out what's trending today. This is honestly too good. Tell me I'm wrong in the comments.",
+                "visual_prompt": "Meme compilation collage with funny images, reaction faces, colorful text overlays, vertical 9:16",
+                "visual_type": "image",
+                "text_overlay": "Wait for it... 😂"
+            },
+            {
+                "order": 3,
+                "scene_type": "loop_bridge",
+                "title": "Punchline",
+                "text": "If that didn't make you smile, I don't know what will. And honestly...",
+                "visual_prompt": "Laughing emoji burst, vibrant colors, dramatic zoom effect, vertical 9:16",
+                "visual_type": "image",
+                "text_overlay": ""
+            },
+        ]
+
+        return json.dumps({"title": title, "scenes": scenes})
+
+    async def _generate_news_script(self, story: dict) -> dict:
         """
         Generate a complete video script from a verified story cluster.
 
@@ -465,7 +635,7 @@ def sanitize_title(raw_title: str) -> str:
     """
     if not raw_title or not raw_title.strip():
         today = datetime.now(timezone.utc).strftime("%B %d, %Y")
-        return f"Daily News Briefing — {today}"
+        return f"Funniest Content Today — {today}"
 
     title = raw_title.strip()
 
@@ -478,26 +648,21 @@ def sanitize_title(raw_title: str) -> str:
                 if extracted and isinstance(extracted, str) and not extracted.startswith("{"):
                     title = extracted.strip()
                 else:
-                    # Try other common fields
                     for field in ["name", "headline", "subject"]:
                         val = data.get(field, "")
                         if val and isinstance(val, str):
                             title = val.strip()
                             break
                     else:
-                        # JSON but no usable field — generate from date
                         today = datetime.now(timezone.utc).strftime("%B %d, %Y")
-                        title = f"Daily News Briefing — {today}"
+                        title = f"Funniest Content Today — {today}"
         except (json.JSONDecodeError, TypeError):
-            # Looks like JSON but isn't valid — it's truncated JSON
-            # Try to extract a title field with regex
             match = re.search(r'"title"\s*:\s*"([^"]+)"', title)
             if match:
                 title = match.group(1).strip()
             else:
-                # Can't salvage anything — use date-based title
                 today = datetime.now(timezone.utc).strftime("%B %d, %Y")
-                title = f"Daily News Briefing — {today}"
+                title = f"Funniest Content Today — {today}"
 
     # Remove any remaining JSON artifacts
     title = title.strip('"\'{}')

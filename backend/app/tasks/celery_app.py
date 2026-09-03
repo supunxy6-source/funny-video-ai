@@ -1,5 +1,5 @@
 """
-AI News Studio — Celery Application
+Stateside Smiles — Celery Application
 
 Configures Celery with Redis broker, result backend,
 task serialization, and retry policies.

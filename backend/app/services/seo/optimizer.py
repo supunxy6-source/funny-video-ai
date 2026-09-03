@@ -1,9 +1,10 @@
 """
-AI News Studio — SEO Optimizer (Views-Optimized Edition)
+Stateside Smiles — SEO Optimizer (Views-Optimized Edition)
 
 Generates SEO-optimized titles, descriptions, tags, chapters,
 and pinned comments for YouTube videos using LLM-powered optimization.
 
+Supports both entertainment (comedy) and news content modes.
 VIEWS OPTIMIZATION: Multi-variant title scoring, power-word CTR heuristics,
 trend-aligned tags, and engagement-bait pinned comments.
 """
@@ -34,22 +35,52 @@ from app.services.scriptwriter.prompts import (
 logger = logging.getLogger(__name__)
 
 # Power words that boost CTR — used for title scoring
-POWER_WORDS = {
-    "tier1": [  # Highest impact — urgency & shock
+# Mode-aware: entertainment uses comedy words, news uses urgency words
+NEWS_POWER_WORDS = {
+    "tier1": [
         "shocking", "exposed", "urgent", "breaking", "warning", "banned",
         "insane", "unbelievable", "massive", "emergency", "critical",
         "catastrophic", "explosive", "devastating",
     ],
-    "tier2": [  # High impact — curiosity & emotion
+    "tier2": [
         "secret", "hidden", "revealed", "truth", "actually", "real",
         "caught", "leaked", "discovered", "confirmed", "impossible",
         "terrifying", "incredible", "dramatic",
     ],
-    "tier3": [  # Medium impact — engagement
+    "tier3": [
         "just", "now", "today", "update", "live", "alert", "new",
         "first", "latest", "official", "major", "huge", "wild",
     ],
 }
+
+ENTERTAINMENT_POWER_WORDS = {
+    "tier1": [  # Highest impact — comedy & viral
+        "funniest", "hilarious", "impossible", "insane", "epic",
+        "unbelievable", "craziest", "wildest", "best", "worst",
+        "cursed", "blessed", "iconic", "legendary",
+    ],
+    "tier2": [  # High impact — engagement
+        "fail", "wins", "wholesome", "relatable", "accurate",
+        "actually", "lowkey", "deadass", "fr", "caught",
+        "exposed", "real", "valid", "goated",
+    ],
+    "tier3": [  # Medium impact — trends
+        "today", "daily", "new", "latest", "trending",
+        "viral", "memes", "compilation", "review", "challenge",
+        "pov", "reaction", "tier",
+    ],
+}
+
+
+def _get_power_words() -> dict:
+    """Get content-mode-appropriate power words."""
+    from app.core.config import settings
+    if getattr(settings, "content_mode", "entertainment") == "entertainment":
+        return ENTERTAINMENT_POWER_WORDS
+    return NEWS_POWER_WORDS
+
+
+POWER_WORDS = _get_power_words()
 
 
 class SEOOptimizer:
@@ -66,7 +97,8 @@ class SEOOptimizer:
         """
         topic = script.get("topic_summary", "")
         script_title = script.get("title", "")
-        category = script.get("category", "News")
+        content_mode = getattr(settings, "content_mode", "entertainment")
+        category = "Comedy" if content_mode == "entertainment" else script.get("category", "News")
 
         # Generate SEO title — now generates 3 variants and picks the best
         seo_title = await self._generate_title(topic, script_title)
@@ -82,43 +114,61 @@ class SEOOptimizer:
 
         # Generate tags with YouTube Shorts tags prepended
         tags = await self._generate_tags(seo_title, topic, category)
-        shorts_tags = [
-            "shorts", "youtubeshorts", "ytshorts", "short",
-            "viral shorts", "trending shorts", "news shorts", "breaking news",
-        ]
-        for st in reversed(shorts_tags):
+
+        if content_mode == "entertainment":
+            base_tags = [
+                "funny", "memes", "comedy", "try not to laugh",
+                "funny videos", "meme compilation", "funny memes",
+                "viral", "trending",
+            ]
+        else:
+            base_tags = [
+                "shorts", "youtubeshorts", "ytshorts", "short",
+                "viral shorts", "trending shorts", "news shorts", "breaking news",
+            ]
+        for st in reversed(base_tags):
             if st not in tags:
                 tags.insert(0, st)
 
-        # Add time-based trending tags for temporal relevance
         now = datetime.now(timezone.utc)
-        time_tags = [
-            f"news {now.strftime('%B').lower()} {now.year}",
-            f"news today {now.year}",
-            "news today",
-            "trending today",
-        ]
+        if content_mode == "entertainment":
+            time_tags = [
+                f"memes {now.strftime('%B').lower()} {now.year}",
+                f"funny videos {now.year}",
+                "memes today",
+                "trending memes",
+            ]
+        else:
+            time_tags = [
+                f"news {now.strftime('%B').lower()} {now.year}",
+                f"news today {now.year}",
+                "news today",
+                "trending today",
+            ]
         for tt in time_tags:
             if tt not in tags:
                 tags.append(tt)
 
         # Generate hashtags — expanded for Shorts discovery with niche tags
-        base_hashtags = [
-            "#Shorts", "#News", "#Trending", "#BreakingNews",
-            "#WorldNews", "#NewsToday", "#ViralNews",
-        ]
-        # Generate niche hashtags from topic keywords for better discoverability
+        if content_mode == "entertainment":
+            base_hashtags = [
+                "#Funny", "#Memes", "#Comedy", "#Viral",
+                "#Trending", "#TryNotToLaugh", "#StatesideSmiles",
+            ]
+        else:
+            base_hashtags = [
+                "#Shorts", "#News", "#Trending", "#BreakingNews",
+                "#WorldNews", "#NewsToday", "#ViralNews",
+            ]
         topic_words = [w.strip() for w in topic.split() if len(w.strip()) >= 4]
         niche_hashtags = []
         for word in topic_words[:3]:
-            # Create clean hashtags from topic keywords
             clean_word = re.sub(r'[^a-zA-Z0-9]', '', word).capitalize()
             if clean_word and len(clean_word) >= 4:
                 niche_hashtags.append(f"#{clean_word}")
-                niche_hashtags.append(f"#{clean_word}News")
         extra_hashtags = [
             f"#{tag.replace(' ', '')}"
-            for tag in tags if tag not in shorts_tags and not tag.startswith("#")
+            for tag in tags if tag not in base_tags and not tag.startswith("#")
         ][:5]
         hashtags = list(dict.fromkeys(base_hashtags + niche_hashtags + extra_hashtags))
 
@@ -304,35 +354,53 @@ class SEOOptimizer:
         Designed to maximize comment replies and engagement signals,
         which directly boost YouTube's algorithmic ranking.
         
-        Uses topic-specific debate questions instead of generic templates
-        to drive genuine conversation and higher engagement rates.
+        Uses content-mode-appropriate engagement prompts.
         """
-        # Extract key topic phrases for specific debate questions
-        clean_topic = topic[:100].strip() if topic else "this story"
+        clean_topic = topic[:100].strip() if topic else "this video"
+        content_mode = getattr(settings, "content_mode", "entertainment")
         
-        # Generate topic-specific debate angle
-        debate_questions = [
-            f"Do you think this will get better or worse? 🤔",
-            f"Who do you think is really responsible for this?",
-            f"How will this affect ordinary people like us?",
-            f"Is this being covered fairly by the media? 🧐",
-            f"What would YOU do in this situation?",
-            f"Did you see this coming or is this a total surprise?",
-            f"Which side are you on? Drop 1 or 2 below 👇",
-            f"How do you think this will play out in the next 30 days?",
-        ]
-        debate_q = random.choice(debate_questions)
-        
-        return (
-            f"🔥 {debate_q}\n\n"
-            f"📌 Topic: {clean_topic}\n\n"
-            f"💬 Reply with your HONEST opinion — no wrong answers!\n"
-            f"❤️ LIKE if this is the first you're hearing of this\n"
-            f"🔔 FOLLOW for daily 60-second news that matters\n"
-            f"📤 TAG someone who needs to see this!\n\n"
-            f"⚠️ All information sourced from verified news outlets. "
-            f"Sources in description."
-        )
+        if content_mode == "entertainment":
+            # Comedy engagement prompts
+            engagement_hooks = [
+                "Which one was YOUR favorite? Drop a number below! 👇",
+                "Tag someone who would DEFINITELY laugh at this 😂",
+                "If you didn't laugh, you have no soul 💀",
+                "POV: you're trying not to laugh in public right now 🤫",
+                "Drop a 😂 if this made your day better!",
+                "Which one broke you? Be honest 💀",
+                "Send this to your funniest friend — see if they survive 🤣",
+                "Comment your funniest experience below 👇 best one gets pinned!",
+            ]
+            hook = random.choice(engagement_hooks)
+            
+            return (
+                f"😂 {hook}\n\n"
+                f"📌 {clean_topic}\n\n"
+                f"💬 Drop your funniest comment — best one gets pinned!\n"
+                f"❤️ LIKE if this made you smile\n"
+                f"🔔 Subscribe to Stateside Smiles for your daily dose of laughs!\n"
+                f"📤 Share with someone who needs a good laugh today!\n"
+            )
+        else:
+            debate_questions = [
+                "Do you think this will get better or worse? 🤔",
+                "Who do you think is really responsible for this?",
+                "How will this affect ordinary people like us?",
+                "What would YOU do in this situation?",
+                "Which side are you on? Drop 1 or 2 below 👇",
+            ]
+            debate_q = random.choice(debate_questions)
+            
+            return (
+                f"🔥 {debate_q}\n\n"
+                f"📌 Topic: {clean_topic}\n\n"
+                f"💬 Reply with your HONEST opinion — no wrong answers!\n"
+                f"❤️ LIKE if this is the first you're hearing of this\n"
+                f"🔔 FOLLOW for daily 60-second news that matters\n"
+                f"📤 TAG someone who needs to see this!\n\n"
+                f"⚠️ All information sourced from verified news outlets. "
+                f"Sources in description."
+            )
 
 
 def _score_title_ctr(title: str) -> float:

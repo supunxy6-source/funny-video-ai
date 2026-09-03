@@ -1,5 +1,5 @@
 """
-AI News Studio — Database Session
+Stateside Smiles — Database Session
 
 Async session factory and FastAPI dependency for database access.
 """

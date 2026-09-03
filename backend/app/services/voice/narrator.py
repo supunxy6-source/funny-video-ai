@@ -1,5 +1,5 @@
 """
-AI News Studio — Voice Narrator
+Stateside Smiles — Voice Narrator
 
 Generates natural narration audio using ElevenLabs TTS API.
 Supports multiple voices, emotion adjustment, and scene-level generation.

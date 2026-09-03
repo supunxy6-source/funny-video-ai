@@ -1,5 +1,5 @@
 """
-AI News Studio — YouTube OAuth2 Authentication
+Stateside Smiles — YouTube OAuth2 Authentication
 
 Handles OAuth2 credential management for YouTube Data API v3.
 Supports initial browser-based auth and automatic token refresh.

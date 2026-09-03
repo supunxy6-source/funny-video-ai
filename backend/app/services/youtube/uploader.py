@@ -1,5 +1,5 @@
 """
-AI News Studio — YouTube Uploader (2026 Algorithm Optimized)
+Stateside Smiles — YouTube Uploader (2026 Algorithm Optimized)
 
 Handles video upload, thumbnail attachment, playlist management,
 and pinned comment creation via YouTube Data API v3.
@@ -46,7 +46,7 @@ class YouTubeUploader:
         title: str,
         description: str,
         tags: list[str],
-        category_id: str = "25",
+        category_id: str = None,
         privacy_status: str = "private",
         scheduled_at: Optional[datetime] = None,
     ) -> str:
@@ -55,6 +55,7 @@ class YouTubeUploader:
 
         Returns the YouTube video ID.
         """
+        category_id = category_id or getattr(settings, "youtube_category_id", "23")
         # 2026: Ensure 'shorts' tag is always present for Shorts shelf discovery
         tags_with_shorts = list(tags) if tags else []
         shorts_tags = {"shorts", "youtubeshorts", "short"}
@@ -258,12 +259,13 @@ async def upload_to_youtube(upload_id: int) -> str:
             clean_title = _ensure_clean_text(upload.title, max_len=100, field_type="title")
             clean_description = _ensure_clean_text(upload.description, max_len=5000, field_type="description")
 
+            category_to_use = upload.category_id or getattr(settings, "youtube_category_id", "23")
             yt_video_id = uploader.upload_video(
                 file_path=video.file_path,
                 title=clean_title,
                 description=clean_description,
                 tags=tags,
-                category_id=upload.category_id,
+                category_id=category_to_use,
                 privacy_status=upload.privacy_status,
                 scheduled_at=upload.scheduled_at,
             )
@@ -288,14 +290,19 @@ async def upload_to_youtube(upload_id: int) -> str:
             # Add pinned comment (2026: auto-generate engagement comment if none provided)
             pinned_text = upload.pinned_comment
             if not pinned_text:
-                # Auto-generate an engagement-optimized pinned comment
-                # Questions in pinned comments boost comment rate — key 2026 algorithm signal
-                pinned_text = (
-                    f"💡 What's YOUR take on this? Drop your thoughts below! 👇\n"
-                    f"\n"
-                    f"❤️ Like if you learned something new\n"
-                    f"🔔 Follow for daily 30-second news updates"
-                )
+                mode = getattr(settings, "content_mode", "entertainment")
+                if mode == "entertainment":
+                    pinned_text = (
+                        "😂 Which part made you laugh the most? Drop your comment below! 👇\n\n"
+                        "❤️ LIKE if this made your day better\n"
+                        "🔔 Subscribe to Stateside Smiles for daily viral laughs!"
+                    )
+                else:
+                    pinned_text = (
+                        "💡 What's YOUR take on this? Drop your thoughts below! 👇\n\n"
+                        "❤️ Like if you learned something new\n"
+                        "🔔 Follow for daily 30-second news updates"
+                    )
             uploader.add_comment(yt_video_id, pinned_text)
 
             # Update final status
@@ -347,9 +354,10 @@ def _ensure_clean_text(text: str, max_len: int = 100, field_type: str = "title")
     """
     if not text or not text.strip():
         today = datetime.now(timezone.utc).strftime("%B %d, %Y")
+        mode = getattr(settings, "content_mode", "entertainment")
         if field_type == "title":
-            return f"Daily News Briefing — {today}"
-        return f"AI-generated news briefing for {today}. Subscribe for daily updates."
+            return f"Funniest Content Today — {today}" if mode == "entertainment" else f"Daily News Briefing — {today}"
+        return f"Daily comedy & viral memes for {today}. Subscribe to Stateside Smiles!" if mode == "entertainment" else f"AI-generated news briefing for {today}. Subscribe for daily updates."
 
     cleaned = text.strip()
 
@@ -375,10 +383,11 @@ def _ensure_clean_text(text: str, max_len: int = 100, field_type: str = "title")
     # Final paranoia check: if the result still looks like JSON, replace entirely
     if cleaned and (cleaned[0] in '{["' and any(c in cleaned for c in ['{', '[', '":', '":'])):
         today = datetime.now(timezone.utc).strftime("%B %d, %Y")
+        mode = getattr(settings, "content_mode", "entertainment")
         if field_type == "title":
-            cleaned = f"Daily News Briefing — {today}"
+            cleaned = f"Funniest Content Today — {today}" if mode == "entertainment" else f"Daily News Briefing — {today}"
         else:
-            cleaned = f"AI-generated news briefing for {today}. Subscribe for daily updates."
+            cleaned = f"Daily comedy & viral memes for {today}. Subscribe to Stateside Smiles!" if mode == "entertainment" else f"AI-generated news briefing for {today}. Subscribe for daily updates."
 
     return cleaned
 

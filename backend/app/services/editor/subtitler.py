@@ -1,5 +1,5 @@
 """
-AI News Studio — Subtitle Generator
+Stateside Smiles — Subtitle Generator
 
 Uses faster-whisper to transcribe narration audio and generate
 SRT subtitle files with word-level timestamps.

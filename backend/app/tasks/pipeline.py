@@ -1,8 +1,9 @@
 """
-AI News Studio — Pipeline Tasks
+Stateside Smiles — Pipeline Tasks
 
 Celery tasks for each step of the video production pipeline.
 The master pipeline chains Steps 1-10 with comprehensive error handling.
+Supports both entertainment and news content modes.
 """
 
 import asyncio
@@ -102,19 +103,19 @@ async def _log(pipeline_run_id: str, level: str, message: str, module: str = Non
         await db.commit()
 
 
-# ── Step 1: News Discovery ────────────────────────────
+# ── Step 1: Content Discovery ────────────────────────
 @celery_app.task(bind=True, name="app.tasks.pipeline.task_discover_news", max_retries=3)
 def task_discover_news(self, pipeline_run_id: str):
-    """Discover and collect news articles from all sources."""
+    """Discover and collect content (entertainment or news based on content_mode)."""
     async def _execute():
         step = "discovery"
         job_id = await _create_job(pipeline_run_id, step, 1, self.request.id if self.request else None)
         try:
-            await _log(pipeline_run_id, "INFO", "Starting news discovery", step, job_id)
+            await _log(pipeline_run_id, "INFO", "Starting content discovery", step, job_id)
             from app.services.discovery.collector import run_discovery
             articles = await run_discovery()
             await _complete_job(job_id, "completed")
-            await _log(pipeline_run_id, "INFO", f"Discovery complete: {len(articles)} articles", step, job_id)
+            await _log(pipeline_run_id, "INFO", f"Discovery complete: {len(articles)} content items", step, job_id)
             return {"pipeline_run_id": pipeline_run_id, "articles_count": len(articles)}
         except Exception as exc:
             await _complete_job(job_id, "failed", str(exc))
@@ -469,11 +470,11 @@ def task_notify(self, prev_result: dict):
 # ── Single Story Production Helper ───────────────────────
 async def produce_single_story_pipeline(story: dict, pipeline_run_id: str, story_index: int = 1, total_stories: int = 1, scheduled_at: datetime = None) -> dict:
     """
-    Produce a complete news video for a single verified story:
+    Produce a complete video for a single content item (story/meme/topic):
     1. Generate Script
     2. Generate Visual Scenes
     3. Generate Voice Narration
-    4. Compose Video (vertical Shorts)
+    4. Compose Video
     5. Generate Thumbnails
     6. Generate SEO metadata
     7. Publish to YouTube (if enabled)
@@ -635,11 +636,11 @@ def run_batch_pipeline(video_count: int = None, pipeline_run_id: str = None):
         # 1. Discovery
         job_id = await _create_job(pipeline_run_id, "discovery", 1)
         try:
-            await _log(pipeline_run_id, "INFO", f"Starting news discovery for {count} videos batch", "discovery", job_id)
+            await _log(pipeline_run_id, "INFO", f"Starting content discovery for {count} videos batch", "discovery", job_id)
             from app.services.discovery.collector import run_discovery
             articles = await run_discovery()
             await _complete_job(job_id, "completed")
-            await _log(pipeline_run_id, "INFO", f"Discovery finished: {len(articles)} articles collected", "discovery", job_id)
+            await _log(pipeline_run_id, "INFO", f"Discovery finished: {len(articles)} content items collected", "discovery", job_id)
         except Exception as exc:
             await _complete_job(job_id, "failed", str(exc))
             await _log(pipeline_run_id, "ERROR", f"Discovery failed: {exc}", "discovery", job_id)
@@ -648,7 +649,7 @@ def run_batch_pipeline(video_count: int = None, pipeline_run_id: str = None):
         # 2. Analysis & Story Ranking
         job_id = await _create_job(pipeline_run_id, "analysis", 2)
         try:
-            await _log(pipeline_run_id, "INFO", "Clustering and ranking top news stories", "analysis", job_id)
+            await _log(pipeline_run_id, "INFO", "Clustering and ranking top content", "analysis", job_id)
             from app.services.analysis.clusterer import run_clustering
             from app.services.analysis.ranker import rank_stories
             from app.services.analysis.verifier import verify_top_stories
@@ -659,7 +660,7 @@ def run_batch_pipeline(video_count: int = None, pipeline_run_id: str = None):
 
             if not verified:
                 await _complete_job(job_id, "completed")
-                await _log(pipeline_run_id, "WARNING", "No verified stories found today", "analysis", job_id)
+                await _log(pipeline_run_id, "WARNING", "No verified content found today", "analysis", job_id)
                 job_id_notif = await _create_job(pipeline_run_id, "notification", 10)
                 await _complete_job(job_id_notif, "completed")
                 return {"pipeline_run_id": pipeline_run_id, "videos_created": 0, "results": []}
@@ -667,7 +668,7 @@ def run_batch_pipeline(video_count: int = None, pipeline_run_id: str = None):
             # Select top N verified stories
             selected_stories = verified[:count]
             await _complete_job(job_id, "completed")
-            await _log(pipeline_run_id, "INFO", f"Selected {len(selected_stories)} verified top stories for video generation", "analysis", job_id)
+            await _log(pipeline_run_id, "INFO", f"Selected {len(selected_stories)} top content items for video generation", "analysis", job_id)
         except Exception as exc:
             await _complete_job(job_id, "failed", str(exc))
             await _log(pipeline_run_id, "ERROR", f"Analysis failed: {exc}", "analysis", job_id)

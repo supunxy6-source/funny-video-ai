@@ -1,5 +1,5 @@
 """
-AI News Studio — Scheduled Tasks
+Stateside Smiles — Scheduled Tasks
 
 Celery Beat schedule configuration for automated daily pipeline
 and periodic maintenance tasks.
@@ -29,7 +29,7 @@ def _get_schedule_hours():
     return str(settings.pipeline_schedule_hour)
 
 celery_app.conf.beat_schedule = {
-    # Automated daily batch video production pipeline (produces 3 to 5 videos per day & publishes to YouTube)
+    # Automated daily batch video production pipeline (produces 3 to 5 comedy videos per day & publishes to YouTube)
     "daily-pipeline": {
         "task": "app.tasks.pipeline.run_full_pipeline",
         "schedule": crontab(
@@ -39,11 +39,14 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "default"},
     },
 
-    # Hourly news discovery
-    "hourly-discovery": {
+    # Content discovery (entertainment: every 2h, news: every 1h)
+    "periodic-discovery": {
         "task": "app.tasks.pipeline.task_discover_news",
-        "schedule": crontab(minute=0),  # Every hour at :00
-        "args": ["hourly_discovery"],
+        "schedule": crontab(
+            minute=0,
+            hour=f"*/{max(1, getattr(settings, 'content_discovery_interval_minutes', 120) // 60)}",
+        ),
+        "args": ["periodic_discovery"],
         "options": {"queue": "discovery"},
     },
 

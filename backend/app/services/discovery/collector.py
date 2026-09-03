@@ -1,8 +1,11 @@
 """
-AI News Studio — News Collector
+Stateside Smiles — Content Collector
 
-Discovers and collects breaking/trending news from 15+ trusted sources
-via RSS feeds and web scraping. Runs hourly via Celery Beat.
+Discovers and collects content based on the configured content mode:
+- "entertainment": Scrapes Reddit, meme APIs, Google Trends for comedy content
+- "news": Legacy RSS news pipeline (preserved for backward compatibility)
+
+Runs periodically via Celery Beat.
 """
 
 import json
@@ -50,7 +53,7 @@ MAX_ARTICLES_PER_SOURCE = 20
 
 
 class NewsCollector:
-    """Collects news articles from RSS feeds and web scraping."""
+    """Collects news articles from RSS feeds and web scraping (legacy news mode)."""
 
     def __init__(self):
         self.http_client = httpx.Client(
@@ -205,9 +208,111 @@ class NewsCollector:
         self.http_client.close()
 
 
-async def run_discovery() -> list[dict]:
+# ═══════════════════════════════════════════════════════════════════════
+# Entertainment Discovery (New — Reddit + Memes + Trends)
+# ═══════════════════════════════════════════════════════════════════════
+
+async def run_entertainment_discovery() -> list[dict]:
     """
-    Main discovery entry point called by Celery task.
+    Main entertainment content discovery entry point.
+    Fetches content from all free comedy sources and stores in DB.
+    Returns list of entertainment content items as dicts.
+    """
+    from app.services.discovery.reddit_scraper import fetch_reddit_trends
+    from app.services.discovery.meme_sources import fetch_all_comedy_sources
+    from app.services.discovery.google_trends_scraper import (
+        fetch_google_trends,
+        filter_comedy_trends,
+    )
+
+    logger.info("😂 Starting entertainment content discovery...")
+
+    all_content = []
+
+    # 1. Reddit trending comedy posts (primary source)
+    try:
+        reddit_posts = await fetch_reddit_trends(limit=30)
+        all_content.extend(reddit_posts)
+        logger.info(f"📱 Reddit: {len(reddit_posts)} comedy posts")
+    except Exception as e:
+        logger.warning(f"Reddit discovery failed: {e}")
+
+    # 2. Meme templates, jokes, facts, history (supplementary)
+    try:
+        comedy_content = await fetch_all_comedy_sources(
+            jokes_count=10,
+            facts_count=5,
+            memes_count=15,
+            otd_count=5,
+        )
+        all_content.extend(comedy_content)
+        logger.info(f"🎭 Comedy sources: {len(comedy_content)} items")
+    except Exception as e:
+        logger.warning(f"Comedy sources failed: {e}")
+
+    # 3. Google Trends (trending topics with comedy angle)
+    try:
+        trends = await fetch_google_trends(limit=20)
+        comedy_trends = filter_comedy_trends(trends)
+        all_content.extend(comedy_trends)
+        logger.info(f"📈 Google Trends: {len(comedy_trends)} comedy-relevant trends")
+    except Exception as e:
+        logger.warning(f"Google Trends failed: {e}")
+
+    # Sort by virality score
+    all_content.sort(key=lambda x: x.get("virality_score", 0), reverse=True)
+
+    # Store in database as articles (reusing existing schema)
+    new_items = []
+    try:
+        async with async_session_factory() as db:
+            for item in all_content:
+                # Check for duplicates by title (entertainment content doesn't have URLs always)
+                item_url = item.get("permalink") or item.get("url") or item.get("id", "")
+                if item_url:
+                    exists = await db.execute(
+                        select(NewsArticle.id).where(NewsArticle.url == item_url)
+                    )
+                    if exists.scalar_one_or_none() is not None:
+                        continue
+
+                article = NewsArticle(
+                    source_id=None,  # No source record for free APIs
+                    headline=item.get("title", "")[:500],
+                    summary=item.get("selftext", "")[:2000] or item.get("title", ""),
+                    body=item.get("selftext", ""),
+                    url=_clean_url(item_url) or f"entertainment_{item.get('id', '')}",
+                    image_url=_clean_url(item.get("image_url")),
+                    author=item.get("author"),
+                    published_at=item.get("created_at"),
+                    category=item.get("category", "entertainment"),
+                    keywords=json.dumps({
+                        "source": item.get("source", ""),
+                        "content_type": item.get("content_type", ""),
+                        "virality_score": item.get("virality_score", 0),
+                        "subreddit": item.get("subreddit", ""),
+                    }),
+                )
+                db.add(article)
+                new_items.append(item)
+
+            await db.commit()
+            logger.info(f"💾 Stored {len(new_items)} new entertainment items in database")
+
+    except Exception as e:
+        logger.error(f"❌ Entertainment storage failed: {e}", exc_info=True)
+        raise
+
+    return new_items
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Legacy News Discovery (Preserved)
+# ═══════════════════════════════════════════════════════════════════════
+
+async def run_news_discovery() -> list[dict]:
+    """
+    Legacy news discovery entry point (preserved for backward compatibility).
     Fetches all active sources, collects articles, deduplicates, and stores in DB.
     Returns list of new articles as dicts.
     """
@@ -282,3 +387,22 @@ async def run_discovery() -> list[dict]:
         collector.close()
 
     return new_articles
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Main Entry Point — Routes by Content Mode
+# ═══════════════════════════════════════════════════════════════════════
+
+async def run_discovery() -> list[dict]:
+    """
+    Main discovery entry point — routes to the appropriate discovery
+    pipeline based on the configured content mode.
+    """
+    content_mode = getattr(settings, "content_mode", "entertainment")
+
+    if content_mode == "entertainment":
+        logger.info("🎭 Running ENTERTAINMENT content discovery")
+        return await run_entertainment_discovery()
+    else:
+        logger.info("📰 Running NEWS content discovery")
+        return await run_news_discovery()

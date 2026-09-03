@@ -1,5 +1,5 @@
 """
-AI News Studio — Pydantic Schemas
+Stateside Smiles — Pydantic Schemas
 
 Request/response validation models for all API endpoints.
 """

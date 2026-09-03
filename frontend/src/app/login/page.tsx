@@ -47,11 +47,11 @@ export default function LoginPage() {
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl"></div>
 
         <div className="relative text-center mb-8">
-          <div className="inline-flex h-12 w-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 items-center justify-center font-bold text-white text-xl shadow-lg shadow-sky-500/30 mb-3">
-            AI
+          <div className="inline-flex h-12 w-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-pink-600 items-center justify-center font-bold text-white text-xl shadow-lg shadow-amber-500/30 mb-3">
+            😄
           </div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">AI News Studio</h1>
-          <p className="text-xs text-slate-400 mt-1">Autonomous News Video Pipeline</p>
+          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Stateside Smiles</h1>
+          <p className="text-xs text-slate-400 mt-1">AI Comedy Video Platform</p>
         </div>
 
         {error && (

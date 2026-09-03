@@ -1,5 +1,5 @@
 """
-AI News Studio — Notification Service
+Stateside Smiles — Notification Service
 
 Sends pipeline status notifications via Email (SMTP) and Slack webhooks.
 """
@@ -45,7 +45,7 @@ class Notifier:
         )
 
         await self._send_email(
-            subject=f"✅ AI News Studio: '{title}' published",
+            subject=f"✅ Stateside Smiles: '{title}' published",
             body=message,
         )
         await self._send_slack(message)
@@ -67,7 +67,7 @@ class Notifier:
         )
 
         await self._send_email(
-            subject=f"❌ AI News Studio: Pipeline failed at {step_name}",
+            subject=f"❌ Stateside Smiles: Pipeline failed at {step_name}",
             body=message,
         )
         await self._send_slack(message)
@@ -80,7 +80,7 @@ class Notifier:
     ) -> None:
         """Send daily summary notification."""
         message = (
-            f"📊 Daily Summary — AI News Studio\n\n"
+            f"📊 Daily Summary — Stateside Smiles\n\n"
             f"📰 Articles collected: {articles_collected}\n"
             f"🎬 Videos produced: {videos_produced}\n"
             f"⏱️ Total content: {total_duration:.1f} minutes\n"
@@ -88,7 +88,7 @@ class Notifier:
         )
 
         await self._send_email(
-            subject="📊 AI News Studio: Daily Summary",
+            subject="📊 Stateside Smiles: Daily Summary",
             body=message,
         )
         await self._send_slack(message)

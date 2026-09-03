@@ -154,6 +154,7 @@ class VideoGenerator:
         self.pexels_key = getattr(settings, "pexels_api_key", "") or os.environ.get("PEXELS_API_KEY", "")
         self.width = getattr(settings, "video_width", 1080)
         self.height = getattr(settings, "video_height", 1920)
+        self.content_mode = getattr(settings, "content_mode", "entertainment")
         # Per-session dedup cache: tracks Pexels video IDs already used in this run
         # so the same stock clip never appears in multiple scenes of the same video.
         self._used_pexels_ids: set[int] = set()
@@ -187,12 +188,12 @@ class VideoGenerator:
             except Exception as e:
                 logger.warning(f"Replicate AI video generation failed: {e}. Trying stock video...")
 
-        # ── Tier 2: Pexels Stock News Video ──────────────────────────────
+        # ── Tier 2: Pexels Stock Video ──────────────────────────────────
         if self.pexels_key and len(self.pexels_key) > 5:
             try:
-                stock_video = await self._fetch_stock_news_video(prompt, duration)
+                stock_video = await self._fetch_stock_news_video(prompt, duration, aspect_ratio=aspect_ratio)
                 if stock_video and os.path.exists(stock_video) and os.path.getsize(stock_video) > 10000:
-                    logger.info(f"📹 Stock news video clip retrieved: {stock_video}")
+                    logger.info(f"📹 Stock video clip retrieved: {stock_video}")
                     return stock_video
             except Exception as e:
                 logger.debug(f"Stock video fetch skipped: {e}")
@@ -399,7 +400,7 @@ class VideoGenerator:
 
         return unique
 
-    async def _fetch_stock_news_video(self, query: str, duration: float) -> Optional[str]:
+    async def _fetch_stock_news_video(self, query: str, duration: float, aspect_ratio: str = "9:16") -> Optional[str]:
         """
         Search Pexels Videos API for real stock video footage.
 
@@ -415,7 +416,8 @@ class VideoGenerator:
         if not search_variations:
             return None
 
-        logger.info(f"🔍 Searching Pexels with {len(search_variations)} query variations")
+        orientation = "landscape" if aspect_ratio == "16:9" else "portrait"
+        logger.info(f"🔍 Searching Pexels ({orientation}) with {len(search_variations)} query variations")
 
         try:
             async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as http:
@@ -427,7 +429,7 @@ class VideoGenerator:
                     search_url = (
                         f"https://api.pexels.com/videos/search"
                         f"?query={urllib.parse.quote(variation)}"
-                        f"&per_page=15&orientation=portrait&page={page}"
+                        f"&per_page=15&orientation={orientation}&page={page}"
                     )
 
                     resp = await http.get(
@@ -1035,6 +1037,10 @@ async def generate_scene_visuals(script_id: int) -> list[dict]:
             scenes_res = await session.execute(scenes_stmt)
             scenes = scenes_res.scalars().all()
 
+        # Determine target aspect ratio from script/settings
+        is_regular = getattr(script, "video_format", "") == "regular" or getattr(settings, "video_format", "") == "regular"
+        target_aspect = "16:9" if is_regular else "9:16"
+
         for scene in scenes:
             scene_dict = {
                 "id": scene.id,
@@ -1050,7 +1056,7 @@ async def generate_scene_visuals(script_id: int) -> list[dict]:
             # 1. Generate high-resolution base image
             img_path = await video_gen.image_gen.generate_image(
                 prompt=scene.visual_prompt or scene.text,
-                aspect_ratio="9:16",
+                aspect_ratio=target_aspect,
                 title=scene.title,
                 search_keywords=scene.visual_prompt or scene.text,
             )
@@ -1060,7 +1066,7 @@ async def generate_scene_visuals(script_id: int) -> list[dict]:
             vid_path = await video_gen.generate_scene_video(
                 scene=scene_dict,
                 duration=duration,
-                aspect_ratio="9:16",
+                aspect_ratio=target_aspect,
                 image_path=img_path,
             )
             scene.video_url = vid_path

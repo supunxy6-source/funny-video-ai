@@ -1,5 +1,5 @@
 """
-AI News Studio — API Dependencies
+Stateside Smiles — API Dependencies
 
 Shared FastAPI dependencies for authentication and database access.
 """

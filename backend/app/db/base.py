@@ -1,5 +1,5 @@
 """
-AI News Studio — Database Base
+Stateside Smiles — Database Base
 
 SQLAlchemy declarative base, engine factory, and common model mixins.
 """

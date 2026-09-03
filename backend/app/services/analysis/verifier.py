@@ -1,5 +1,5 @@
 """
-AI News Studio — Story Verifier
+Stateside Smiles — Story Verifier
 
 Enforces the "3+ independent trusted sources" rule.
 Rejects unverified claims, gossip, clickbait, and rumors

@@ -1,5 +1,5 @@
 """
-AI News Studio — Facebook Page Uploader
+Stateside Smiles — Facebook Page Uploader
 
 Handles video upload to Facebook Pages via the Meta Graph Video API.
 Supports resumable chunked upload for large video files.

@@ -1,5 +1,5 @@
 """
-AI News Studio — Story Ranker (Views-Optimized Edition)
+Stateside Smiles — Story Ranker (Views-Optimized Edition)
 
 Ranks story clusters by newsworthiness using a weighted scoring model
 that considers source count, trust scores, recency, category importance,

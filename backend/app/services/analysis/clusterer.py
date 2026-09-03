@@ -1,5 +1,5 @@
 """
-AI News Studio — Story Clusterer
+Stateside Smiles — Story Clusterer
 
 Groups duplicate/related news stories using TF-IDF vectorization
 and agglomerative clustering. This ensures we identify the same
