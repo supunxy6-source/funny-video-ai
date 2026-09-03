@@ -1,0 +1,76 @@
+# ======================================================
+# AI News Studio — Git Ignore
+# ======================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+postgres_data/
+redis_data/
+
+# Generated media
+media/generated/
+media/temp/
+*.mp4
+*.mp3
+*.wav
+*.srt
+*.vtt
+
+# YouTube credentials (sensitive!)
+config/client_secrets.json
+config/youtube_token.json
+backend/config/client_secrets.json
+backend/config/youtube_token.json
+
+# Logs
+logs/
+*.log
+
+# Node.js
+node_modules/
+.next/
+out/
+.turbo/
+frontend/.env.local
+
+# Test coverage
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Whisper model cache
+whisper_models/

@@ -1,0 +1,14 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+env
+frontend/node_modules
+frontend/.next
+media/generated
+media/temp
+postgres_data
+redis_data

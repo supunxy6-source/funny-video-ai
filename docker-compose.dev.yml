@@ -1,0 +1,60 @@
+# ======================================================
+# AI News Studio — Docker Compose (Development Override)
+# ======================================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+    volumes:
+      - ./backend:/app
+      - media_data:/app/media
+      - ./config:/app/config
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugpy
+
+  worker:
+    volumes:
+      - ./backend:/app
+      - media_data:/app/media
+      - ./config:/app/config
+    command: >
+      celery -A app.tasks.celery_app worker
+      --loglevel=debug
+      --concurrency=2
+      -Q default,discovery,analysis,production,upload
+
+  beat:
+    volumes:
+      - ./backend:/app
+    command: >
+      celery -A app.tasks.celery_app beat
+      --loglevel=debug
+      --schedule=/tmp/celerybeat-schedule
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    command: npm run dev
+
+  # Disable nginx in dev — access services directly
+  nginx:
+    profiles:
+      - production

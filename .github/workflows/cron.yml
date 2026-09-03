@@ -1,0 +1,81 @@
+name: Scheduled Video Pipeline
+
+on:
+  schedule:
+    - cron: '0 16 * * *'  # Runs daily at 16:00 UTC (12:00 PM US Eastern Time)
+  workflow_dispatch:      # Allows manual trigger from the GitHub UI
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Create .env file from secrets
+        run: |
+          cat << 'EOF' > .env
+          ${{ secrets.ENV_FILE_CONTENT }}
+          EOF
+
+      - name: Create YouTube Auth Files
+        run: |
+          mkdir -p config backend/config
+          cat << 'EOF' > config/client_secrets.json
+          ${{ secrets.YOUTUBE_CLIENT_SECRETS }}
+          EOF
+          cat << 'EOF' > config/youtube_token.json
+          ${{ secrets.YOUTUBE_TOKEN }}
+          EOF
+          cp config/client_secrets.json backend/config/client_secrets.json
+          cp config/youtube_token.json backend/config/youtube_token.json
+
+      - name: Start Docker Compose Services
+        run: |
+          # Start postgres, redis, api, and celery worker
+          docker compose up --build -d postgres redis api worker
+          
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API to start..."
+          count=0
+          max_attempts=30
+          until curl -s -f http://localhost:8000/health; do
+            count=$((count + 1))
+            if [ $count -ge $max_attempts ]; then
+              echo "❌ API failed to start after $max_attempts attempts!"
+              echo "=== API Container Logs ==="
+              docker compose logs api
+              echo "=== Postgres Logs ==="
+              docker compose logs postgres
+              exit 1
+            fi
+            echo "Still waiting... ($count/$max_attempts)"
+            sleep 5
+          done
+          echo "API is healthy!"
+
+      - name: Run Pipeline Script
+        run: |
+          # Run the script inside the 'worker' container so it has access to dependencies and Celery configuration
+          docker compose exec -T worker python scripts/trigger_and_wait.py
+
+      - name: Extract Generated Videos
+        if: always()
+        run: |
+          mkdir -p output_videos
+          docker cp $(docker compose ps -q worker):/app/media/generated ./output_videos || true
+
+      - name: Upload Video Artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ai-news-videos
+          path: ./output_videos/generated/
+          retention-days: 7
+
+      - name: Stop Docker Services
+        if: always()
+        run: |
+          docker compose down
