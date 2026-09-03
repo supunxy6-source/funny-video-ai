@@ -79,22 +79,26 @@ class StoryVerifier:
                 f"Average trust score {avg_trust:.2f} below threshold {MIN_TRUST_SCORE}"
             )
 
-        # 3. Check for clickbait indicators
+        # 3. Check for clickbait indicators (skip for entertainment mode)
+        mode = getattr(settings, "content_mode", "entertainment")
         clickbait_count = 0
-        for article in articles:
-            headline_lower = article.get("headline", "").lower()
-            for indicator in CLICKBAIT_INDICATORS:
-                if indicator in headline_lower:
-                    clickbait_count += 1
-                    break
+        if mode != "entertainment":
+            for article in articles:
+                headline_lower = article.get("headline", "").lower()
+                for indicator in CLICKBAIT_INDICATORS:
+                    if indicator in headline_lower:
+                        clickbait_count += 1
+                        break
 
-        clickbait_ratio = clickbait_count / len(articles) if articles else 0
-        if clickbait_ratio > 0.5:
-            reasons.append(
-                f"High clickbait ratio: {clickbait_ratio:.0%} of articles contain clickbait indicators"
-            )
-        elif clickbait_ratio > 0.2:
-            warnings.append(f"Some clickbait indicators detected ({clickbait_ratio:.0%})")
+            clickbait_ratio = clickbait_count / len(articles) if articles else 0
+            if clickbait_ratio > 0.5:
+                reasons.append(
+                    f"High clickbait ratio: {clickbait_ratio:.0%} of articles contain clickbait indicators"
+                )
+            elif clickbait_ratio > 0.2:
+                warnings.append(f"Some clickbait indicators detected ({clickbait_ratio:.0%})")
+        else:
+            clickbait_ratio = 0.0
 
         # 4. Check for content substance (articles should have body text)
         articles_with_body = sum(1 for a in articles if a.get("body"))

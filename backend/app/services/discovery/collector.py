@@ -266,8 +266,37 @@ async def run_entertainment_discovery() -> list[dict]:
     new_items = []
     try:
         async with async_session_factory() as db:
+            # Ensure default Source records exist for free entertainment providers
+            sources_cache = {}
+            for src_name, src_cat in [
+                ("Reddit", "comedy"),
+                ("Imgflip", "meme"),
+                ("JokeAPI", "comedy"),
+                ("Google Trends", "trending"),
+                ("Stateside Smiles", "entertainment"),
+            ]:
+                src_res = await db.execute(select(Source).where(Source.name == src_name))
+                existing_src = src_res.scalar_one_or_none()
+                if not existing_src:
+                    existing_src = Source(
+                        name=src_name,
+                        url=f"https://{src_name.lower().replace(' ', '')}.com",
+                        rss_url="",
+                        trust_score=1.0,
+                        category=src_cat,
+                        country="US",
+                        language="en",
+                        is_active=True,
+                        description=f"{src_name} content provider for Stateside Smiles",
+                    )
+                    db.add(existing_src)
+                    await db.flush()
+                sources_cache[src_name.lower()] = existing_src.id
+
+            default_source_id = sources_cache.get("stateside smiles")
+
             for item in all_content:
-                # Check for duplicates by title (entertainment content doesn't have URLs always)
+                # Check for duplicates by title/URL
                 item_url = item.get("permalink") or item.get("url") or item.get("id", "")
                 if item_url:
                     exists = await db.execute(
@@ -276,8 +305,11 @@ async def run_entertainment_discovery() -> list[dict]:
                     if exists.scalar_one_or_none() is not None:
                         continue
 
+                src_key = (item.get("source") or "stateside smiles").lower()
+                item_source_id = sources_cache.get(src_key, default_source_id)
+
                 article = NewsArticle(
-                    source_id=None,  # No source record for free APIs
+                    source_id=item_source_id,
                     headline=item.get("title", "")[:500],
                     summary=item.get("selftext", "")[:2000] or item.get("title", ""),
                     body=item.get("selftext", ""),
