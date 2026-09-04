@@ -31,8 +31,8 @@ class Settings(BaseSettings):
 
     # ── Content Mode ──────────────────────────────────
     content_mode: str = "entertainment"  # entertainment | news
-    meme_style: str = "mixed"  # compilation | voiceover | mixed
-    reddit_subreddits: str = "funny,memes,dankmemes,wholesomememes,facepalm,MadeMeSmile,me_irl,meirl"
+    meme_style: str = "story"  # story | compilation | voiceover | mixed
+    reddit_subreddits: str = "tifu,pettyrevenge,confession,MaliciousCompliance,AskReddit,dadjokes,jokes,funny,memes,wholesomememes,MadeMeSmile"
 
     # ── Database ───────────────────────────────────────
     postgres_host: str = "localhost"

@@ -11,7 +11,187 @@ Content styles:
 """
 
 # ═══════════════════════════════════════════════════════════════════════
-# System Prompt — Comedy Content Creator Persona
+# System Prompt — Natural Storyteller Persona (Story Mode)
+# ═══════════════════════════════════════════════════════════════════════
+
+STORY_SYSTEM_PROMPT = """You are a master comedic storyteller for the YouTube channel "Stateside Smiles".
+Your videos sound 100% NATURAL, HUMAN, and ENGAGING—like a funny, charismatic friend sharing an unbelievable, hilarious true story with you over coffee or a drink.
+
+You understand what makes Reddit and TikTok storytelling go viral:
+1. THE HOOK: An immediate conflict, curiosity gap, or relatable disaster in the first 2 seconds ("I still cannot believe someone thought this was a good idea...", "So my roommate decided to save $200 on a plumber...", "This is quite possibly the pettiest thing I have ever witnessed.")
+2. CONVERSATIONAL RHYTHM: Use spoken human speech patterns. Include natural conversational devices:
+   - "...and get this,"
+   - "Now, normal people would just apologize and move on. But nope..."
+   - "Picture this:"
+   - "I kid you not..."
+   - "And here is where things went completely off the rails."
+3. NARRATIVE MOMENTUM: Every sentence pushes the story forward. Build comedic anticipation.
+4. THE TWIST & CLIMAX: The punchline is baked into the climax of the story.
+5. LOOP BRIDGE: The final sentence naturally circles back into the opening hook for infinite rewatch loops.
+
+CRITICAL RULES:
+- NEVER sound robotic or use corporate AI phrases like "In today's video", "Welcome back guys", "This person really said", "Let's dive in", or "Here is what happened".
+- Retell the story in a lively, natural first-person or third-person storyteller voice. Reframe usernames or Reddit formatting into smooth oral storytelling.
+- Use natural pauses (ellipses "...", em-dashes, commas) so the text-to-speech voice breathes and inflects naturally.
+- Keep sentences punchy (under 12 words) for maximum retention and effortless caption reading.
+- Wholesome, clever, relatable humor only—never hateful or derogatory.
+"""
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Story Shorts Script Prompt (35-50 seconds / 4 scenes)
+# ═══════════════════════════════════════════════════════════════════════
+
+STORY_SHORTS_PROMPT = """Write a VIRAL YouTube Shorts storytelling comedy script (STRICTLY 35-50 SECONDS / 85-120 WORDS TOTAL).
+
+STORY / CONTENT TO RETELL:
+{content_text}
+
+CONTENT TYPE: {content_type}
+
+STRUCTURE (Must be strictly 4 scenes output as JSON):
+{{
+    "title": "Ultra-compelling story title under 50 chars (e.g. 'The Pettiest Revenge In History 😂')",
+    "scenes": [
+        {{
+            "order": 1,
+            "scene_type": "story_hook",
+            "title": "The Hook",
+            "text": "Immediate conflict or disbelief hook that STOPS the scroll. Max 15-20 words, 2-3 seconds. (e.g. 'I still cannot believe someone actually thought this was a 200 IQ move.')",
+            "visual_prompt": "Cinematic vertical video of an expressive face in disbelief or funny situation, 9:16 vertical, high quality",
+            "visual_type": "video",
+            "text_overlay": "Wait for it... 💀"
+        }},
+        {{
+            "order": 2,
+            "scene_type": "story_setup",
+            "title": "The Setup",
+            "text": "Quickly set the stage, characters, and stakes with conversational energy. Use 'Picture this:' or 'So this guy...'. (25-35 words, 10-15 seconds)",
+            "visual_prompt": "Relatable everyday setting B-roll video, vertical 9:16 composition, engaging motion",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 3,
+            "scene_type": "story_escalation",
+            "title": "The Twist",
+            "text": "The conflict escalates, the terrible mistake happens, or the hilarious twist is revealed. Build the anticipation. (30-40 words, 12-18 seconds)",
+            "visual_prompt": "Dramatic or chaotic funny situation B-roll video, vertical 9:16, dynamic movement",
+            "visual_type": "video",
+            "text_overlay": "It gets worse... 😭"
+        }},
+        {{
+            "order": 4,
+            "scene_type": "story_payoff_loop",
+            "title": "Punchline & Loop",
+            "text": "Deliver the hilarious outcome/aftermath, then end with a seamless phrase that loops right back to scene 1 without pause. Do NOT say subscribe or like. (15-25 words, 6-10 seconds)",
+            "visual_prompt": "Laughing reaction visual or hilarious punchline reveal video, vertical 9:16",
+            "visual_type": "video",
+            "text_overlay": ""
+        }}
+    ]
+}}
+
+TARGET: 85-120 words total across EXACTLY 4 scenes (35-50 seconds).
+CRITICAL: ONLY 4 SCENES. Story arc — Hook -> Setup -> Escalation -> Payoff/Loop.
+visual_type: video (stock video footage for maximum engagement)
+
+Respond with ONLY the JSON object, no markdown formatting."""
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Story Regular Script Prompt (4-7 minutes)
+# ═══════════════════════════════════════════════════════════════════════
+
+STORY_REGULAR_PROMPT = """Write a comedy storytelling YouTube video script (4-7 MINUTES / 600-1000 WORDS) consisting of hilarious true stories.
+
+STORIES TO RETELL:
+{content_text}
+
+STRUCTURE (Output as JSON):
+{{
+    "title": "Captivating storytelling title under 70 chars (e.g. '3 Times People Took Petty Revenge Way Too Far')",
+    "scenes": [
+        {{
+            "order": 1,
+            "scene_type": "story_hook",
+            "title": "Cold Open Hook",
+            "text": "Hook the audience immediately with the craziest moment or quote from the story. No generic intros. (30-45 words)",
+            "visual_prompt": "Dramatic high-energy cinematic B-roll, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 2,
+            "scene_type": "story_setup",
+            "title": "Story 1 - The Setup",
+            "text": "Introduce the first scenario with conversational charisma and relatable stakes. (60-90 words)",
+            "visual_prompt": "Everyday setting comedic B-roll, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 3,
+            "scene_type": "story_escalation",
+            "title": "Story 1 - Escalation",
+            "text": "How things escalated or the plan went completely wrong. (70-100 words)",
+            "visual_prompt": "Dramatic comedic reaction B-roll, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 4,
+            "scene_type": "story_payoff",
+            "title": "Story 1 - Payoff",
+            "text": "The hilarious punchline and outcome. (50-80 words)",
+            "visual_prompt": "Humorous payoff B-roll, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 5,
+            "scene_type": "story_setup",
+            "title": "Story 2 - The Setup",
+            "text": "Transition seamlessly into the next hilarious story: 'Now, if you thought that was bad, wait until you hear about...' (60-90 words)",
+            "visual_prompt": "New scenario B-roll video, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 6,
+            "scene_type": "story_escalation",
+            "title": "Story 2 - Escalation",
+            "text": "The turning point and chaotic buildup. (70-100 words)",
+            "visual_prompt": "Fast-paced situation B-roll video, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 7,
+            "scene_type": "story_payoff",
+            "title": "Story 2 - Payoff",
+            "text": "The unbelievable result and conclusion. (50-80 words)",
+            "visual_prompt": "Laughing reaction and reveal B-roll, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": ""
+        }},
+        {{
+            "order": 8,
+            "scene_type": "outro",
+            "title": "Outro & CTA",
+            "text": "Comedic reflection on human nature and natural outro: 'Which one of these would you have handled differently? Tell me in the comments, and subscribe to Stateside Smiles for daily internet happiness.' (40-60 words)",
+            "visual_prompt": "Stateside Smiles comedy branding with subscribe prompt, 16:9 landscape",
+            "visual_type": "video",
+            "text_overlay": "Subscribe for more 😄"
+        }}
+    ]
+}}
+
+Respond with ONLY the JSON object, no markdown formatting."""
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# System Prompt — Comedy Content Creator Persona (Meme Mode)
 # ═══════════════════════════════════════════════════════════════════════
 
 ENTERTAINMENT_SYSTEM_PROMPT = """You are an elite viral comedy content creator for the YouTube channel "Stateside Smiles".

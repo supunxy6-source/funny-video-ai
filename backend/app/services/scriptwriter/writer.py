@@ -294,6 +294,9 @@ class ScriptWriter:
         Generate a comedy/entertainment script from trending content.
         """
         from app.services.scriptwriter.entertainment_prompts import (
+            STORY_SYSTEM_PROMPT,
+            STORY_SHORTS_PROMPT,
+            STORY_REGULAR_PROMPT,
             ENTERTAINMENT_SYSTEM_PROMPT,
             SHORTS_ENTERTAINMENT_PROMPT,
             REGULAR_VIDEO_PROMPT,
@@ -311,29 +314,43 @@ class ScriptWriter:
         # Determine video format (Shorts vs Regular)
         video_format = story.get("video_format", "shorts")
 
-        # Select the right prompt
-        if video_format == "regular":
-            prompt = REGULAR_VIDEO_PROMPT.format(
-                content_text=content_text,
-            )
+        # Select prompt and system persona based on style & content
+        meme_style = getattr(settings, "meme_style", "story")
+        is_story_mode = (meme_style == "story" or content_type == "story")
+
+        if is_story_mode:
+            system_prompt = STORY_SYSTEM_PROMPT
+            if video_format == "regular":
+                prompt = STORY_REGULAR_PROMPT.format(content_text=content_text)
+            else:
+                prompt = STORY_SHORTS_PROMPT.format(
+                    content_text=content_text,
+                    content_type=content_type,
+                )
+        elif video_format == "regular":
+            system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
+            prompt = REGULAR_VIDEO_PROMPT.format(content_text=content_text)
         elif content_type == "meme":
+            system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
             prompt = MEME_COMPILATION_PROMPT.format(
                 content_text=content_text,
                 video_format=video_format,
             )
         else:
+            system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
             prompt = SHORTS_ENTERTAINMENT_PROMPT.format(
                 content_text=content_text,
                 content_type=content_type,
             )
 
         topic_summary = story.get("top_headline", "") or articles[0].get("headline", "Funny Content")
-        logger.info(f"😂 Generating {video_format} comedy script for: {topic_summary[:80]}...")
+        mode_label = "story" if is_story_mode else "comedy"
+        logger.info(f"😂 Generating {video_format} ({mode_label}) script for: {topic_summary[:80]}...")
 
         try:
             response = await self.llm.generate(
                 prompt=prompt,
-                system_prompt=ENTERTAINMENT_SYSTEM_PROMPT,
+                system_prompt=system_prompt,
                 max_tokens=4096,
                 temperature=0.8,  # Slightly higher for comedy creativity
             )
@@ -368,7 +385,7 @@ class ScriptWriter:
         }
 
         logger.info(
-            f"✅ Comedy script generated: '{result['title']}' "
+            f"✅ {mode_label.capitalize()} script generated: '{result['title']}' "
             f"({word_count} words, ~{result['duration_estimate']} min)"
         )
 
@@ -380,10 +397,11 @@ class ScriptWriter:
         for i, item in enumerate(articles[:10], 1):
             source = item.get("source", "reddit")
             content_type = item.get("content_type", "post")
+            body_text = item.get("selftext") or item.get("summary") or ""
             parts.append(
                 f"[Item {i} — {source}/{content_type}]\n"
                 f"Title: {item.get('headline', item.get('title', 'N/A'))}\n"
-                f"Content: {item.get('summary', item.get('selftext', ''))[:500]}\n"
+                f"Content: {body_text[:1800]}\n"
                 f"Category: {item.get('category', 'entertainment')}\n"
                 f"Virality: {item.get('virality_score', 'N/A')}\n"
             )
@@ -400,11 +418,9 @@ class ScriptWriter:
         return "mixed"
 
     def _generate_entertainment_fallback(self, story: dict) -> str:
-        """Generate fallback comedy script when LLM fails."""
+        """Generate fallback natural story script when LLM fails."""
         articles = story.get("articles", [])
-        today = datetime.now(timezone.utc).strftime("%B %d, %Y")
-
-        title = "The Funniest Things on the Internet Today"
+        title = "An Unbelievable Story You Have To Hear 😂"
         if articles:
             first_title = articles[0].get("headline", articles[0].get("title", ""))
             if first_title:
@@ -413,29 +429,38 @@ class ScriptWriter:
         scenes = [
             {
                 "order": 1,
-                "scene_type": "hook",
+                "scene_type": "story_hook",
                 "title": "Hook",
-                "text": "Okay I need everyone to see this right now.",
-                "visual_prompt": "Colorful meme-style graphic with shocked face emoji, vibrant gradient background, vertical 9:16",
-                "visual_type": "image",
-                "text_overlay": ""
+                "text": "I still cannot believe someone actually thought this was a good idea.",
+                "visual_prompt": "Shocked expression reaction video, vertical 9:16",
+                "visual_type": "video",
+                "text_overlay": "Wait for it... 💀"
             },
             {
                 "order": 2,
-                "scene_type": "comedy_body",
-                "title": "The Content",
-                "text": "The internet never disappoints. Check out what's trending today. This is honestly too good. Tell me I'm wrong in the comments.",
-                "visual_prompt": "Meme compilation collage with funny images, reaction faces, colorful text overlays, vertical 9:16",
-                "visual_type": "image",
-                "text_overlay": "Wait for it... 😂"
+                "scene_type": "story_setup",
+                "title": "Setup",
+                "text": "Picture this: everything seemed completely normal at first, until someone decided to take matters into their own hands.",
+                "visual_prompt": "Everyday situational comedic video, vertical 9:16",
+                "visual_type": "video",
+                "text_overlay": ""
             },
             {
                 "order": 3,
-                "scene_type": "loop_bridge",
+                "scene_type": "story_escalation",
+                "title": "The Twist",
+                "text": "Now, normal people would just apologize and walk away. But nope... they doubled down, and that is when things went completely sideways.",
+                "visual_prompt": "Chaotic funny situation video, vertical 9:16",
+                "visual_type": "video",
+                "text_overlay": "It gets worse... 😭"
+            },
+            {
+                "order": 4,
+                "scene_type": "story_payoff_loop",
                 "title": "Punchline",
-                "text": "If that didn't make you smile, I don't know what will. And honestly...",
-                "visual_prompt": "Laughing emoji burst, vibrant colors, dramatic zoom effect, vertical 9:16",
-                "visual_type": "image",
+                "text": "And to this day, they still swear it was totally worth it. Which honestly makes you wonder...",
+                "visual_prompt": "Laughing reaction reveal video, vertical 9:16",
+                "visual_type": "video",
                 "text_overlay": ""
             },
         ]

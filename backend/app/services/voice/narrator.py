@@ -90,15 +90,17 @@ class VoiceNarrator:
         return None
 
     def _clean_narration_text(self, text: str) -> str:
-        """Strip brackets, JSON fragments, and formatting from speech text."""
+        """Strip brackets, JSON fragments, and formatting while preserving natural speech cadence."""
         import re
         # Remove bracketed directions like [Scene 1], [Visual: ...], (laughs), etc.
         cleaned = re.sub(r'\[.*?\]', '', text)
         cleaned = re.sub(r'\(.*?\)', '', cleaned)
         cleaned = re.sub(r'[*_#>`]', '', cleaned)
         cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-        # Automatically insert slight pauses at the end of sentences to improve pacing
-        cleaned = re.sub(r'\.(?=\s|$)', '...', cleaned)
+        # Normalize multiple ellipses down to a natural 3-dot pause
+        cleaned = re.sub(r'\.{4,}', '...', cleaned)
+        # Ensure clean spacing after punctuation
+        cleaned = re.sub(r'([.,!?;:])(?=[A-Za-z])', r'\1 ', cleaned)
         return cleaned
 
     def _generate_elevenlabs_audio(
@@ -243,12 +245,20 @@ class VoiceNarrator:
                 "use_speaker_boost": True,
             }
             overrides = {
+                # General comedy types
                 "hook": {"stability": 0.35, "style": 0.55},
                 "comedy_body": {"stability": 0.42, "style": 0.45},
                 "punchline": {"stability": 0.38, "style": 0.50},
                 "loop_bridge": {"stability": 0.40, "style": 0.50},
                 "intro": {"stability": 0.45, "style": 0.40},
                 "cta": {"stability": 0.40, "style": 0.45},
+                # Storytelling narrative types
+                "story_hook": {"stability": 0.38, "style": 0.52},
+                "story_setup": {"stability": 0.46, "style": 0.40},
+                "story_escalation": {"stability": 0.40, "style": 0.48},
+                "story_payoff": {"stability": 0.36, "style": 0.52},
+                "story_payoff_loop": {"stability": 0.36, "style": 0.52},
+                "story_transition": {"stability": 0.44, "style": 0.42},
             }
         else:
             base = {

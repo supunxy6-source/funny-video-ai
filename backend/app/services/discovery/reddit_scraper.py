@@ -23,13 +23,14 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-# Default comedy subreddits to scrape
+# Default comedy & narrative subreddits to scrape
 DEFAULT_SUBREDDITS = [
-    "funny", "memes", "dankmemes", "wholesomememes",
-    "facepalm", "MadeMeSmile", "me_irl", "meirl",
+    "tifu", "pettyrevenge", "confession", "MaliciousCompliance",
+    "AskReddit", "dadjokes", "jokes", "funny", "memes",
+    "wholesomememes", "MadeMeSmile",
 ]
 
-# Reddit JSON API base URL
+# Reddit JSON/RSS API base URL
 REDDIT_BASE = "https://www.reddit.com"
 
 # Minimum engagement thresholds for quality filtering
@@ -44,6 +45,36 @@ USER_AGENT = (
 
 # Request timeout
 REQUEST_TIMEOUT = 15.0
+
+
+def _clean_reddit_html(summary_html: str) -> str:
+    """Extract clean text content from Reddit RSS HTML summary."""
+    if not summary_html:
+        return ""
+    import html
+
+    # Extract content inside <div class="md"> if present
+    md_match = re.search(r'<div class="md">(.*?)</div>', summary_html, flags=re.DOTALL)
+    raw = md_match.group(1) if md_match else summary_html
+
+    # Remove script/style/comment tags
+    text = re.sub(r'<!--.*?-->', '', raw, flags=re.DOTALL)
+    # Remove footers and meta links
+    text = re.sub(r'submitted by\s+<a.*?</a>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\[<a.*?link</a>\]', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\[<a.*?comments</a>\]', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<span>.*?</span>', '', text, flags=re.IGNORECASE)
+    # Replace paragraph and line break tags with newlines
+    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</p>', '\n\n', text, flags=re.IGNORECASE)
+    # Strip remaining HTML tags
+    text = re.sub(r'<[^>]+>', ' ', text)
+    # Unescape HTML entities
+    text = html.unescape(text)
+    # Normalize excessive whitespace but preserve clean spacing
+    paragraphs = [re.sub(r'[ \t]+', ' ', p).strip() for p in text.split('\n')]
+    cleaned = "\n".join(p for p in paragraphs if p)
+    return cleaned.strip()
 
 
 class RedditScraper:
@@ -140,19 +171,34 @@ class RedditScraper:
                         continue
 
                     summary = getattr(entry, "summary", "")
+                    clean_body = _clean_reddit_html(summary)
+
                     # Extract direct image URL from RSS summary HTML
                     img_match = re.search(r'href="([^"]+\.(?:jpg|png|webp|jpeg))"', summary)
                     image_url = img_match.group(1) if img_match else None
 
                     post_id = getattr(entry, "id", "") or getattr(entry, "link", "")
-                    content_type = "image" if image_url else "text"
+
+                    # Determine content type: story, joke, or image
+                    selftext = clean_body if clean_body else title
+                    sub_lower = subreddit.lower()
+                    if image_url:
+                        content_type = "image"
+                    elif sub_lower in ["jokes", "dadjokes", "cleanjokes"]:
+                        content_type = "joke"
+                    elif sub_lower in ["tifu", "pettyrevenge", "confession", "maliciouscompliance", "askreddit", "stories"]:
+                        content_type = "story"
+                    elif len(clean_body) > 120:
+                        content_type = "story"
+                    else:
+                        content_type = "text"
 
                     posts.append({
                         "id": post_id,
                         "source": "reddit",
                         "subreddit": subreddit,
                         "title": title,
-                        "selftext": title,
+                        "selftext": selftext,
                         "content_type": content_type,
                         "image_url": image_url,
                         "video_url": None,

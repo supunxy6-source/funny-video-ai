@@ -12,6 +12,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.session import async_session_factory
 from app.models.scene import Scene
 from app.models.script import Script
@@ -41,7 +42,27 @@ class VisualPlanner:
 
             # Enhance visual prompts based on scene type
             scene_type = scene.get("scene_type", "")
-            if scene_type == "hook":
+            if scene_type == "story_hook":
+                visual_plan["visual_type"] = "video"
+                visual_plan["visual_prompt"] = self._enhance_story_hook_prompt(
+                    scene.get("visual_prompt", ""), scene.get("text", "")
+                )
+            elif scene_type == "story_setup":
+                visual_plan["visual_type"] = "video"
+                visual_plan["visual_prompt"] = self._enhance_story_setup_prompt(
+                    scene.get("visual_prompt", ""), scene.get("text", "")
+                )
+            elif scene_type in ["story_escalation", "the_twist"]:
+                visual_plan["visual_type"] = "video"
+                visual_plan["visual_prompt"] = self._enhance_story_escalation_prompt(
+                    scene.get("visual_prompt", ""), scene.get("text", "")
+                )
+            elif scene_type in ["story_payoff", "story_payoff_loop", "punchline"]:
+                visual_plan["visual_type"] = "video"
+                visual_plan["visual_prompt"] = self._enhance_story_payoff_prompt(
+                    scene.get("visual_prompt", ""), scene.get("text", "")
+                )
+            elif scene_type == "hook":
                 visual_plan["visual_prompt"] = self._enhance_hook_prompt(
                     scene.get("visual_prompt", ""), scene.get("text", "")
                 )
@@ -67,6 +88,50 @@ class VisualPlanner:
 
         logger.info(f"🎬 Visual storyboard planned: {len(storyboard)} scenes")
         return storyboard
+
+    def _enhance_story_hook_prompt(self, base_prompt: str, text: str) -> str:
+        """Create an expressive, curiosity-piquing visual prompt for storytelling hook."""
+        snippet = text[:150].strip() if text else ""
+        context = f" Context: {snippet}." if snippet else ""
+        return (
+            f"{base_prompt}.{context} "
+            "Expressive close-up reaction of a person looking shocked and amused in disbelief, "
+            "vibrant cinematic lighting, natural human expression, candid documentary feel, "
+            "vertical 9:16 portrait video composition, smooth motion, high definition"
+        )
+
+    def _enhance_story_setup_prompt(self, base_prompt: str, text: str) -> str:
+        """Create a relatable everyday B-roll video prompt for storytelling setup."""
+        snippet = text[:150].strip() if text else ""
+        context = f" Context: {snippet}." if snippet else ""
+        return (
+            f"{base_prompt}.{context} "
+            "Relatable everyday situation B-roll, natural camera movement panning across the scene, "
+            "warm realistic lighting, engaging lifestyle visual, authentic human activity, "
+            "vertical 9:16 composition, 4K quality"
+        )
+
+    def _enhance_story_escalation_prompt(self, base_prompt: str, text: str) -> str:
+        """Create a dramatic/chaotic comedic video prompt for storytelling conflict/escalation."""
+        snippet = text[:150].strip() if text else ""
+        context = f" Context: {snippet}." if snippet else ""
+        return (
+            f"{base_prompt}.{context} "
+            "Dynamic fast-paced camera motion capturing an escalating humorous mishap, "
+            "dramatic comedic timing, someone looking stressed or facepalming in disbelief, "
+            "energetic movement, vertical 9:16 composition, cinematic video"
+        )
+
+    def _enhance_story_payoff_prompt(self, base_prompt: str, text: str) -> str:
+        """Create a hilarious reveal/payoff visual prompt for storytelling punchline."""
+        snippet = text[:150].strip() if text else ""
+        context = f" Context: {snippet}." if snippet else ""
+        return (
+            f"{base_prompt}.{context} "
+            "Satisfying comedic reveal, person bursting into laughter and smiling, "
+            "celebratory or amused reaction, vibrant colors, "
+            "vertical 9:16 composition, smooth video playback"
+        )
 
     def _enhance_hook_prompt(self, base_prompt: str, text: str) -> str:
         """Create a dramatic, motion-oriented video prompt for the hook scene."""
