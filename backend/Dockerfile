@@ -26,6 +26,9 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries 10 --upgrade pip 
 # Copy source
 COPY . .
 
+# Create media directories (seeds fresh Docker volumes)
+RUN mkdir -p /app/media/generated /app/media/temp /app/media/thumbnails
+
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
@@ -45,6 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libgl1 \
     curl \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -59,12 +63,16 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries 10 --upgrade pip 
 
 COPY . .
 
-# Copy entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && \
+# Create media directories (seeds fresh Docker volumes) and set ownership
+RUN mkdir -p /app/media/generated /app/media/temp /app/media/thumbnails && \
     chown -R appuser:appuser /app
 
-USER appuser
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# NOTE: No USER directive — entrypoint runs as root, creates/chowns
+# volume dirs, then drops to appuser via gosu.
 
 EXPOSE 8000
 
