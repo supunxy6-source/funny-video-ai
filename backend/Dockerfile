@@ -26,11 +26,13 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries 10 --upgrade pip 
 # Copy source
 COPY . .
 
-# Create media directories
-RUN mkdir -p /app/media/generated /app/media/temp /app/media/thumbnails
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 8000
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 
@@ -57,11 +59,14 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries 10 --upgrade pip 
 
 COPY . .
 
-RUN mkdir -p /app/media/generated /app/media/temp /app/media/thumbnails && \
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && \
     chown -R appuser:appuser /app
 
 USER appuser
 
 EXPOSE 8000
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
