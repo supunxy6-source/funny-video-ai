@@ -122,7 +122,8 @@ class LLMClient:
         # Clean the title and append #Shorts
         title = sanitize_title(top_headline) if top_headline else f"Global News Report — {today}"
         if not title.lower().endswith("#shorts"):
-            title = f"{title[:50]} #Shorts"
+            safe_title = title[:42].rsplit(" ", 1)[0] if len(title) > 42 else title
+            title = f"{safe_title} #Shorts"
 
         # Build intro from top headline (Hook)
         if top_headline:
@@ -295,6 +296,7 @@ class ScriptWriter:
         """
         from app.services.scriptwriter.entertainment_prompts import (
             STORY_SYSTEM_PROMPT,
+            MICRO_SHORTS_PROMPT,
             STORY_SHORTS_PROMPT,
             STORY_REGULAR_PROMPT,
             ENTERTAINMENT_SYSTEM_PROMPT,
@@ -316,12 +318,18 @@ class ScriptWriter:
 
         # Select prompt and system persona based on style & content
         meme_style = getattr(settings, "meme_style", "story")
+        shorts_duration_mode = getattr(settings, "shorts_duration_mode", "micro")
         is_story_mode = (meme_style == "story" or content_type == "story")
 
         if is_story_mode:
             system_prompt = STORY_SYSTEM_PROMPT
             if video_format == "regular":
                 prompt = STORY_REGULAR_PROMPT.format(content_text=content_text)
+            elif shorts_duration_mode == "micro":
+                prompt = MICRO_SHORTS_PROMPT.format(
+                    content_text=content_text,
+                    content_type=content_type,
+                )
             else:
                 prompt = STORY_SHORTS_PROMPT.format(
                     content_text=content_text,
@@ -336,6 +344,12 @@ class ScriptWriter:
                 content_text=content_text,
                 video_format=video_format,
             )
+        elif shorts_duration_mode == "micro":
+            system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
+            prompt = MICRO_SHORTS_PROMPT.format(
+                content_text=content_text,
+                content_type=content_type,
+            )
         else:
             system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
             prompt = SHORTS_ENTERTAINMENT_PROMPT.format(
@@ -344,7 +358,7 @@ class ScriptWriter:
             )
 
         topic_summary = story.get("top_headline", "") or articles[0].get("headline", "Funny Content")
-        mode_label = "story" if is_story_mode else "comedy"
+        mode_label = f"story-micro" if (is_story_mode and shorts_duration_mode == "micro") else ("story" if is_story_mode else "comedy")
         logger.info(f"😂 Generating {video_format} ({mode_label}) script for: {topic_summary[:80]}...")
 
         try:
@@ -420,50 +434,83 @@ class ScriptWriter:
     def _generate_entertainment_fallback(self, story: dict) -> str:
         """Generate fallback natural story script when LLM fails."""
         articles = story.get("articles", [])
-        title = "An Unbelievable Story You Have To Hear 😂"
+        title = "He Really Thought He Was Safe 💀"
         if articles:
             first_title = articles[0].get("headline", articles[0].get("title", ""))
             if first_title:
-                title = first_title[:50]
+                clean = sanitize_title(first_title)
+                title = clean[:42].rsplit(" ", 1)[0] if len(clean) > 42 else clean
 
-        scenes = [
-            {
-                "order": 1,
-                "scene_type": "story_hook",
-                "title": "Hook",
-                "text": "I still cannot believe someone actually thought this was a good idea.",
-                "visual_prompt": "Shocked expression reaction video, vertical 9:16",
-                "visual_type": "video",
-                "text_overlay": "Wait for it... 💀"
-            },
-            {
-                "order": 2,
-                "scene_type": "story_setup",
-                "title": "Setup",
-                "text": "Picture this: everything seemed completely normal at first, until someone decided to take matters into their own hands.",
-                "visual_prompt": "Everyday situational comedic video, vertical 9:16",
-                "visual_type": "video",
-                "text_overlay": ""
-            },
-            {
-                "order": 3,
-                "scene_type": "story_escalation",
-                "title": "The Twist",
-                "text": "Now, normal people would just apologize and walk away. But nope... they doubled down, and that is when things went completely sideways.",
-                "visual_prompt": "Chaotic funny situation video, vertical 9:16",
-                "visual_type": "video",
-                "text_overlay": "It gets worse... 😭"
-            },
-            {
-                "order": 4,
-                "scene_type": "story_payoff_loop",
-                "title": "Punchline",
-                "text": "And to this day, they still swear it was totally worth it. Which honestly makes you wonder...",
-                "visual_prompt": "Laughing reaction reveal video, vertical 9:16",
-                "visual_type": "video",
-                "text_overlay": ""
-            },
-        ]
+        shorts_duration_mode = getattr(settings, "shorts_duration_mode", "micro")
+        if shorts_duration_mode == "micro":
+            scenes = [
+                {
+                    "order": 1,
+                    "scene_type": "micro_hook",
+                    "title": "Hook",
+                    "text": "...nobody warned him what happens when you step right here.",
+                    "visual_prompt": "Shocked expression reaction video, vertical 9:16",
+                    "visual_type": "video",
+                    "text_overlay": "Wait for it... 💀"
+                },
+                {
+                    "order": 2,
+                    "scene_type": "micro_escalation",
+                    "title": "The Twist & Debate",
+                    "text": "He took one confident step onto the floor before realizing his mistake. Would you have walked across this for ten thousand dollars?",
+                    "visual_prompt": "Everyday situational comedic video, vertical 9:16",
+                    "visual_type": "video",
+                    "text_overlay": "It gets worse... 😭"
+                },
+                {
+                    "order": 3,
+                    "scene_type": "micro_payoff_loop",
+                    "title": "Payoff & Loop",
+                    "text": "He instantly regretted every life decision, and that is the exact reason why...",
+                    "visual_prompt": "Laughing reaction reveal video, vertical 9:16",
+                    "visual_type": "video",
+                    "text_overlay": ""
+                },
+            ]
+        else:
+            scenes = [
+                {
+                    "order": 1,
+                    "scene_type": "story_hook",
+                    "title": "Hook",
+                    "text": "Nobody warned him about what was about to happen next.",
+                    "visual_prompt": "Shocked expression reaction video, vertical 9:16",
+                    "visual_type": "video",
+                    "text_overlay": "Wait for it... 💀"
+                },
+                {
+                    "order": 2,
+                    "scene_type": "story_setup",
+                    "title": "Setup",
+                    "text": "Everything seemed completely normal at first, until someone decided to take matters into their own hands.",
+                    "visual_prompt": "Everyday situational comedic video, vertical 9:16",
+                    "visual_type": "video",
+                    "text_overlay": ""
+                },
+                {
+                    "order": 3,
+                    "scene_type": "story_escalation",
+                    "title": "The Twist",
+                    "text": "Normal people would apologize and walk away. But nope... they doubled down, and that sparked a massive debate.",
+                    "visual_prompt": "Chaotic funny situation video, vertical 9:16",
+                    "visual_type": "video",
+                    "text_overlay": "It gets worse... 😭"
+                },
+                {
+                    "order": 4,
+                    "scene_type": "story_payoff_loop",
+                    "title": "Punchline",
+                    "text": "And to this day, they still swear it was totally worth it. Which honestly makes you wonder...",
+                    "visual_prompt": "Laughing reaction reveal video, vertical 9:16",
+                    "visual_type": "video",
+                    "text_overlay": ""
+                },
+            ]
 
         return json.dumps({"title": title, "scenes": scenes})
 

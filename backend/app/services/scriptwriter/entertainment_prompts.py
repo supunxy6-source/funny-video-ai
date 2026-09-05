@@ -17,32 +17,108 @@ Content styles:
 STORY_SYSTEM_PROMPT = """You are a master comedic storyteller for the YouTube channel "Stateside Smiles".
 Your videos sound 100% NATURAL, HUMAN, and ENGAGING—like a funny, charismatic friend sharing an unbelievable, hilarious true story with you over coffee or a drink.
 
-You understand what makes Reddit and TikTok storytelling go viral:
-1. THE HOOK: An immediate conflict, curiosity gap, or relatable disaster in the first 2 seconds ("I still cannot believe someone thought this was a good idea...", "So my roommate decided to save $200 on a plumber...", "This is quite possibly the pettiest thing I have ever witnessed.")
-2. CONVERSATIONAL RHYTHM: Use spoken human speech patterns. Include natural conversational devices:
-   - "...and get this,"
-   - "Now, normal people would just apologize and move on. But nope..."
-   - "Picture this:"
-   - "I kid you not..."
-   - "And here is where things went completely off the rails."
-3. NARRATIVE MOMENTUM: Every sentence pushes the story forward. Build comedic anticipation.
-4. THE TWIST & CLIMAX: The punchline is baked into the climax of the story.
-5. LOOP BRIDGE: The final sentence naturally circles back into the opening hook for infinite rewatch loops.
+You engineer every short for the 2026 YouTube Shorts algorithm to achieve 90%+ RETENTION and 80%+ STAYED-TO-WATCH RATIO:
 
-CRITICAL RULES:
-- NEVER sound robotic or use corporate AI phrases like "In today's video", "Welcome back guys", "This person really said", "Let's dive in", or "Here is what happened".
-- Retell the story in a lively, natural first-person or third-person storyteller voice. Reframe usernames or Reddit formatting into smooth oral storytelling.
-- Use natural pauses (ellipses "...", em-dashes, commas) so the text-to-speech voice breathes and inflects naturally.
-- Keep sentences punchy (under 12 words) for maximum retention and effortless caption reading.
-- Wholesome, clever, relatable humor only—never hateful or derogatory.
+1. FRAME-0 SCROLL-STOPPING HOOK (FIRST 1.5 SECONDS):
+   - NEVER start with slow preambles, greetings, or filler:
+     ❌ BANNED: "So today...", "I still cannot believe someone...", "Picture this:", "Welcome back", "Here is what happened".
+   - ALWAYS start with immediate mid-action conflict, disbelief, or forbidden curiosity (under 8 words):
+     ✅ "Nobody warned him about this floor..."
+     ✅ "He really thought he had this figured out..."
+     ✅ "Never challenge someone with nothing to lose..."
+     ✅ "This is hands-down the pettiest move in history..."
+
+2. 18-25 SECOND MICRO-PACING (THE VIRAL APV SWEET SPOT):
+   - The YouTube Shorts audience consumes content in rapid bursts (11-18 seconds).
+   - Short, punchy sentences (under 7 words).
+   - Dynamic narrative escalation: every 2 seconds raises the comedic stakes.
+
+3. EMBEDDED COMMENT & DEBATE TRIGGERS (CRITICAL FOR ALGORITHM):
+   - Around the 70% mark of the video, embed a polarized question or relatable moral dilemma:
+     * "Who was actually in the wrong here?"
+     * "Would you have walked across this for $10,000?"
+     * "Tell me this isn't the most relatable reaction ever."
+   - Comments cause viewers to open the comment drawer, LOOPING THE VIDEO IN THE BACKGROUND and driving retention past 100%!
+
+4. INFINITE GRAMMATICAL LOOP ARCHITECTURE:
+   - The FINAL sentence of the script must NOT have a concluding cadence or period.
+   - It MUST grammatically and semantically lead DIRECTLY into the opening sentence of Scene 1!
+   - Example Loop:
+     * Scene 3 Ending: "And that is the exact reason why..."
+     * Scene 1 Opening: "...you should never trust a glass floor."
+     * Complete loop heard by viewer: "...And that is the exact reason why you should never trust a glass floor."
+   - When executed properly, viewers watch 3-5 seconds into the second loop before realizing it repeated, boosting retention to 110%-140%!
+
+5. NO INTRO, NO OUTRO, NO CTA WASTE:
+   - Never say "Subscribe", "Like the video", or "Follow for more". Every single second is pure content.
+   - Wholesome, clever, relatable humor only—never hateful or derogatory.
 """
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Story Shorts Script Prompt (35-50 seconds / 4 scenes)
+# Micro-Shorts Script Prompt (18-25 seconds / 3 scenes) — 90%+ RETENTION ENGINE
 # ═══════════════════════════════════════════════════════════════════════
 
-STORY_SHORTS_PROMPT = """Write a VIRAL YouTube Shorts storytelling comedy script (STRICTLY 35-50 SECONDS / 85-120 WORDS TOTAL).
+MICRO_SHORTS_PROMPT = """Write an ultra-viral, high-retention YouTube Micro-Short comedy script (STRICTLY 18-25 SECONDS / 45-65 WORDS TOTAL).
+
+STORY / CONTENT TO RETELL:
+{content_text}
+
+CONTENT TYPE: {content_type}
+
+ALGORITHMIC REQUIREMENTS:
+1. STRICTLY 3 SCENES — Hook (0-3s), Escalation & Debate (10-14s), Payoff & Loop Bridge (4-7s).
+2. TOTAL WORD COUNT: 45 to 65 words MAXIMUM across the entire script (at 165 WPM = ~18-24 seconds).
+3. GRAMMATICAL LOOP: Scene 3 MUST end with an incomplete connector clause that flows seamlessly into Scene 1's hook.
+4. EMBEDDED DEBATE: Scene 2 MUST contain a quick polarized question to spark comment wars.
+5. TITLE: High curiosity, under 42 characters, never truncated.
+
+STRUCTURE (Output as JSON):
+{{
+    "title": "Ultra-catchy title under 42 chars (e.g. 'He Really Thought He Was Safe 💀')",
+    "scenes": [
+        {{
+            "order": 1,
+            "scene_type": "micro_hook",
+            "title": "Scroll-Stopper Hook",
+            "text": "Instant mid-action hook. MAX 7-10 words (2-3 seconds). No filler. (e.g. '...nobody warned him what happens when you step here.')",
+            "visual_prompt": "Cinematic vertical 9:16 shot, sudden zoom into shocked face or dramatic funny moment, vibrant high contrast, rapid motion",
+            "visual_type": "video",
+            "text_overlay": "Wait for it... 💀"
+        }},
+        {{
+            "order": 2,
+            "scene_type": "micro_escalation",
+            "title": "The Twist & Debate",
+            "text": "Rapid escalation of the funny situation + one quick dilemma/debate question to trigger comments. (25-35 words, 10-14 seconds)",
+            "visual_prompt": "Dynamic fast-paced funny situation B-roll video, vertical 9:16 composition, energetic movement every 1.5s",
+            "visual_type": "video",
+            "text_overlay": "It gets worse... 😭"
+        }},
+        {{
+            "order": 3,
+            "scene_type": "micro_payoff_loop",
+            "title": "Payoff & Infinite Loop",
+            "text": "The hilarious punchline, ending with an incomplete phrase that grammatically leads into Scene 1. No goodbye, no subscribe. (12-18 words, 4-7 seconds)",
+            "visual_prompt": "Hilarious reaction reveal video, vertical 9:16, comedic timing punchline visual",
+            "visual_type": "video",
+            "text_overlay": ""
+        }}
+    ]
+}}
+
+TARGET: 45-65 words total across EXACTLY 3 scenes (18-25 seconds).
+CRITICAL: ONLY 3 SCENES. Hook -> Twist/Debate -> Payoff/Loop.
+visual_type: video (stock video footage for maximum engagement)
+
+Respond with ONLY the JSON object, no markdown formatting."""
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Story Shorts Script Prompt (35-50 seconds / 4 scenes) — Standard Duration
+# ═══════════════════════════════════════════════════════════════════════
+
+STORY_SHORTS_PROMPT = """Write a VIRAL YouTube Shorts storytelling comedy script (STRICTLY 30-40 SECONDS / 75-100 WORDS TOTAL).
 
 STORY / CONTENT TO RETELL:
 {content_text}
@@ -51,13 +127,13 @@ CONTENT TYPE: {content_type}
 
 STRUCTURE (Must be strictly 4 scenes output as JSON):
 {{
-    "title": "Ultra-compelling story title under 50 chars (e.g. 'The Pettiest Revenge In History 😂')",
+    "title": "Ultra-compelling story title under 42 chars (e.g. 'The Pettiest Revenge In History 😂')",
     "scenes": [
         {{
             "order": 1,
             "scene_type": "story_hook",
             "title": "The Hook",
-            "text": "Immediate conflict or disbelief hook that STOPS the scroll. Max 15-20 words, 2-3 seconds. (e.g. 'I still cannot believe someone actually thought this was a 200 IQ move.')",
+            "text": "Immediate conflict or disbelief hook that STOPS the scroll. Max 10-12 words, 2-3 seconds. No filler.",
             "visual_prompt": "Cinematic vertical video of an expressive face in disbelief or funny situation, 9:16 vertical, high quality",
             "visual_type": "video",
             "text_overlay": "Wait for it... 💀"
@@ -66,7 +142,7 @@ STRUCTURE (Must be strictly 4 scenes output as JSON):
             "order": 2,
             "scene_type": "story_setup",
             "title": "The Setup",
-            "text": "Quickly set the stage, characters, and stakes with conversational energy. Use 'Picture this:' or 'So this guy...'. (25-35 words, 10-15 seconds)",
+            "text": "Quickly set the stage, characters, and stakes with conversational energy. Keep sentences short. (20-30 words, 8-12 seconds)",
             "visual_prompt": "Relatable everyday setting B-roll video, vertical 9:16 composition, engaging motion",
             "visual_type": "video",
             "text_overlay": ""
@@ -74,8 +150,8 @@ STRUCTURE (Must be strictly 4 scenes output as JSON):
         {{
             "order": 3,
             "scene_type": "story_escalation",
-            "title": "The Twist",
-            "text": "The conflict escalates, the terrible mistake happens, or the hilarious twist is revealed. Build the anticipation. (30-40 words, 12-18 seconds)",
+            "title": "The Twist & Debate",
+            "text": "The conflict escalates or the hilarious twist is revealed. Include a quick comment debate question. (25-35 words, 10-14 seconds)",
             "visual_prompt": "Dramatic or chaotic funny situation B-roll video, vertical 9:16, dynamic movement",
             "visual_type": "video",
             "text_overlay": "It gets worse... 😭"
@@ -84,7 +160,7 @@ STRUCTURE (Must be strictly 4 scenes output as JSON):
             "order": 4,
             "scene_type": "story_payoff_loop",
             "title": "Punchline & Loop",
-            "text": "Deliver the hilarious outcome/aftermath, then end with a seamless phrase that loops right back to scene 1 without pause. Do NOT say subscribe or like. (15-25 words, 6-10 seconds)",
+            "text": "Deliver the hilarious outcome, then end with a seamless phrase that loops right back to scene 1 without pause. Do NOT say subscribe or like. (12-20 words, 5-8 seconds)",
             "visual_prompt": "Laughing reaction visual or hilarious punchline reveal video, vertical 9:16",
             "visual_type": "video",
             "text_overlay": ""
@@ -92,7 +168,7 @@ STRUCTURE (Must be strictly 4 scenes output as JSON):
     ]
 }}
 
-TARGET: 85-120 words total across EXACTLY 4 scenes (35-50 seconds).
+TARGET: 75-100 words total across EXACTLY 4 scenes (30-40 seconds).
 CRITICAL: ONLY 4 SCENES. Story arc — Hook -> Setup -> Escalation -> Payoff/Loop.
 visual_type: video (stock video footage for maximum engagement)
 

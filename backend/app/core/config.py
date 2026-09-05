@@ -96,6 +96,7 @@ class Settings(BaseSettings):
     video_format: str = "shorts"
     video_format_shorts: bool = True
     video_format_regular: bool = True
+    shorts_duration_mode: Literal["micro", "standard"] = "micro"  # micro (18-25s, 90%+ retention) | standard (35-50s)
     video_width: int = 1080
     video_height: int = 1920
     video_aspect_ratio: str = "9:16"

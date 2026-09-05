@@ -172,16 +172,14 @@ class SEOOptimizer:
         ][:5]
         hashtags = list(dict.fromkeys(base_hashtags + niche_hashtags + extra_hashtags))
 
-        # Generate engagement-optimized pinned comment
-        pinned_comment = self._generate_pinned_comment(topic, seo_title)
+        # Generate engagement-optimized pinned comment with polarizing debate hooks
+        pinned_comment = await self._generate_pinned_comment(topic, seo_title)
 
-        # Ensure #Shorts tag in title
-        clean_title = _sanitize_seo_title(seo_title)
-        if not clean_title.lower().endswith("#shorts"):
-            clean_title = f"{clean_title[:85]} #Shorts"
+        # Ensure clean, mobile-safe #Shorts title without mid-word truncation
+        clean_title = format_shorts_title(seo_title, max_base_len=42)
 
         result = {
-            "title": clean_title[:100],  # YouTube 100 char limit
+            "title": clean_title,  # YouTube 100 char limit (mobile sweet spot 35-48 chars)
             "description": description[:5000],  # YouTube 5000 char limit
             "tags": json.dumps(tags[:30]),  # Max 30 tags
             "hashtags": " ".join(hashtags),
@@ -247,14 +245,14 @@ class SEOOptimizer:
                 except Exception:
                     pass
             
-            # Final sanitization
+            # Final sanitization with word boundary protection
             best_title = _sanitize_seo_title(best_title)
-            return best_title[:100]
+            return _truncate_at_word_boundary(best_title, 80)
         except Exception as e:
             logger.warning(f"Title generation failed: {e}")
             # Fallback: use script_title but sanitize it first
             clean = _sanitize_seo_title(script_title)
-            return clean[:100]
+            return _truncate_at_word_boundary(clean, 80)
 
     async def _generate_description(
         self,
@@ -348,59 +346,109 @@ class SEOOptimizer:
 
         return "\n".join(chapters)
 
-    def _generate_pinned_comment(self, topic: str, title: str) -> str:
-        """Generate an engagement-optimized pinned comment.
+    async def _generate_pinned_comment(self, topic: str, title: str) -> str:
+        """Generate an engagement-optimized pinned comment with polarizing debate hooks.
         
-        Designed to maximize comment replies and engagement signals,
-        which directly boost YouTube's algorithmic ranking.
-        
-        Uses content-mode-appropriate engagement prompts.
+        Engineered to spark active discussions and debate in the comments.
+        When viewers open the comment section to reply, the Short keeps looping
+        in the background, pushing Average Percentage Viewed well past 100%.
         """
         clean_topic = topic[:100].strip() if topic else "this video"
+        clean_title = (title or "").lower()
         content_mode = getattr(settings, "content_mode", "entertainment")
         
+        # 1. Try dynamic LLM debate question generation
+        try:
+            prompt = (
+                f"Create ONE ultra-engaging, polarizing debate question for a YouTube Short comment section.\n"
+                f"Topic: {topic}\n"
+                f"Title: {title}\n"
+                f"Rules:\n"
+                f"- Must be a 50/50 dilemma, moral question, or 'Would you do this' challenge that forces viewers to comment.\n"
+                f"- Maximum 15 words.\n"
+                f"- Include 1 emoji and point down 👇.\n"
+                f"Output ONLY the question text, no quotes, no markdown."
+            )
+            llm_response = await self.llm.generate(prompt, max_tokens=60, temperature=0.9)
+            debate_q = llm_response.strip().strip('"\'')
+            if len(debate_q) > 12 and not debate_q.startswith("{"):
+                return (
+                    f"🔥 {debate_q}\n\n"
+                    f"💬 Drop your honest thoughts below — best reply gets pinned! 📌\n"
+                    f"❤️ LIKE if this made you smile\n"
+                    f"🔔 Subscribe to Stateside Smiles for daily laughs!"
+                )
+        except Exception as e:
+            logger.debug(f"LLM pinned comment generation fallback: {e}")
+
+        # 2. Intelligent topic-matched debate hook fallback
         if content_mode == "entertainment":
-            # Comedy engagement prompts
-            engagement_hooks = [
-                "Which one was YOUR favorite? Drop a number below! 👇",
-                "Tag someone who would DEFINITELY laugh at this 😂",
-                "If you didn't laugh, you have no soul 💀",
-                "POV: you're trying not to laugh in public right now 🤫",
-                "Drop a 😂 if this made your day better!",
-                "Which one broke you? Be honest 💀",
-                "Send this to your funniest friend — see if they survive 🤣",
-                "Comment your funniest experience below 👇 best one gets pinned!",
-            ]
-            hook = random.choice(engagement_hooks)
+            topic_str = f"{clean_title} {clean_topic.lower()}"
+            if any(w in topic_str for w in ["revenge", "petty", "karen", "neighbor", "boss", "roommate", "coworker"]):
+                debate_hook = "Who was 100% in the wrong here? Drop 1 for OP or 2 for the other person 👇"
+            elif any(w in topic_str for w in ["floor", "scary", "fall", "jump", "dare", "heights", "glass", "challenge"]):
+                debate_hook = "Be completely honest: would you have done this for $10,000? 💀👇"
+            elif any(w in topic_str for w in ["money", "cost", "scam", "job", "fired", "quit", "work", "price"]):
+                debate_hook = "Would you have walked out on the spot or taken the deal? Debate below 👇"
+            elif any(w in topic_str for w in ["smart", "iq", "genius", "hack", "trick"]):
+                debate_hook = "Is this a 200 IQ move or completely unhinged? Debate below 💀👇"
+            else:
+                debate_hooks = [
+                    "Be honest: what would YOU have done in this exact situation? 👇",
+                    "Is this totally justified or did they take it way too far? Drop your take 👇",
+                    "Would you have survived this without laughing? Be honest 💀👇",
+                    "Rate how chaotic this was from 1 to 10 below 👇",
+                    "Have you ever experienced something this ridiculous? Best reply gets pinned! 📌👇",
+                ]
+                debate_hook = random.choice(debate_hooks)
             
             return (
-                f"😂 {hook}\n\n"
-                f"📌 {clean_topic}\n\n"
-                f"💬 Drop your funniest comment — best one gets pinned!\n"
-                f"❤️ LIKE if this made you smile\n"
-                f"🔔 Subscribe to Stateside Smiles for your daily dose of laughs!\n"
-                f"📤 Share with someone who needs a good laugh today!\n"
+                f"🔥 {debate_hook}\n\n"
+                f"💬 Drop your comment below — best one gets pinned! 📌\n"
+                f"❤️ LIKE if this made your day better\n"
+                f"🔔 Subscribe to Stateside Smiles for daily viral laughs!"
             )
         else:
-            debate_questions = [
-                "Do you think this will get better or worse? 🤔",
-                "Who do you think is really responsible for this?",
-                "How will this affect ordinary people like us?",
-                "What would YOU do in this situation?",
-                "Which side are you on? Drop 1 or 2 below 👇",
+            news_debates = [
+                "Who do you think is really responsible for this? Drop your take 👇",
+                "Do you believe this will make things better or worse? Be honest 👇",
+                "How would this affect you if it happened in your city? 👇",
+                "Which side do you agree with? Vote 1 or 2 below 👇",
             ]
-            debate_q = random.choice(debate_questions)
-            
+            debate_q = random.choice(news_debates)
             return (
                 f"🔥 {debate_q}\n\n"
-                f"📌 Topic: {clean_topic}\n\n"
-                f"💬 Reply with your HONEST opinion — no wrong answers!\n"
-                f"❤️ LIKE if this is the first you're hearing of this\n"
-                f"🔔 FOLLOW for daily 60-second news that matters\n"
-                f"📤 TAG someone who needs to see this!\n\n"
-                f"⚠️ All information sourced from verified news outlets. "
-                f"Sources in description."
+                f"💬 Reply with your unfiltered opinion — best perspective gets pinned! 📌\n"
+                f"❤️ LIKE to boost verified coverage\n"
+                f"🔔 Subscribe for daily 30-second news breakdowns"
             )
+
+
+def _truncate_at_word_boundary(text: str, max_len: int) -> str:
+    """Truncate text cleanly at word boundaries to avoid slicing words in half (e.g. 'walk' -> 'wa')."""
+    if not text or len(text) <= max_len:
+        return text.strip() if text else ""
+    truncated = text[:max_len]
+    last_space = truncated.rfind(" ")
+    if last_space > 0:
+        return truncated[:last_space].rstrip(",.-:;?! ")
+    return truncated.rstrip(",.-:;?! ")
+
+
+def format_shorts_title(raw_title: str, max_base_len: int = 42) -> str:
+    """Format an ultra-clean YouTube Shorts title that fits on mobile screens without truncation.
+    
+    YouTube Shorts mobile UI truncates titles around 45-50 characters with ellipsis.
+    This ensures clean word-boundary truncation and appends '#Shorts'.
+    """
+    clean = _sanitize_seo_title(raw_title)
+    # Strip any existing #shorts tag (case-insensitive)
+    clean_no_tag = re.sub(r'#shorts\b', '', clean, flags=re.IGNORECASE).strip()
+    clean_no_tag = clean_no_tag.rstrip(",.-:;?! ")
+    
+    # Truncate base title at word boundary
+    safe_base = _truncate_at_word_boundary(clean_no_tag, max_base_len)
+    return f"{safe_base} #Shorts"
 
 
 def _score_title_ctr(title: str) -> float:
@@ -408,11 +456,12 @@ def _score_title_ctr(title: str) -> float:
     
     Uses a multi-signal heuristic based on YouTube Shorts best practices:
     - Power words presence and tier
-    - Title length (shorter = better for Shorts)
+    - Title length (sweet spot 28-45 chars for mobile Shorts, never truncated)
     - Number presence (boosts CTR ~30%)
     - Question marks (curiosity gap)
     - Emotional triggers
     - #Shorts tag presence
+    - Severe penalty for incomplete/chopped trailing words
     """
     score = 0.5
     title_lower = title.lower()
@@ -431,18 +480,18 @@ def _score_title_ctr(title: str) -> float:
             score += 0.05
             break
     
-    # Title length — sweet spot is 25-40 chars for Shorts
+    # Title length — sweet spot is 28-45 chars for Shorts mobile display
     title_len = len(title)
-    if 25 <= title_len <= 40:
-        score += 0.15  # Optimal length
-    elif title_len < 25:
-        score += 0.10  # Too short but still decent
-    elif title_len <= 55:
+    if 28 <= title_len <= 45:
+        score += 0.20  # Optimal mobile length
+    elif 20 <= title_len < 28:
+        score += 0.12  # Short & punchy
+    elif 45 < title_len <= 55:
         score += 0.05  # Acceptable
     else:
-        score -= 0.10  # Too long
+        score -= 0.15  # Too long — truncates with '...' on mobile screens
     
-    # Number presence (e.g., "47 people", "$2 billion")
+    # Number presence (e.g., "47 people", "$2 billion", "200 IQ")
     if re.search(r'\d', title):
         score += 0.10
     
@@ -473,6 +522,15 @@ def _score_title_ctr(title: str) -> float:
         if word in title_lower:
             score -= 0.05
             break
+
+    # Penalty for truncated/chopped trailing word (e.g., 'wa' instead of 'walk')
+    title_without_shorts = re.sub(r'#shorts\b', '', title, flags=re.IGNORECASE).strip()
+    words = title_without_shorts.split()
+    if words:
+        last_word = words[-1].strip(".,!?:;\"'()[]")
+        common_short_words = {"a", "i", "in", "on", "to", "at", "no", "he", "it", "so", "up", "do", "my", "we", "by", "is", "or", "an"}
+        if len(last_word) <= 2 and last_word.lower() not in common_short_words:
+            score -= 0.25  # Severe penalty for truncated word fragment
     
     return min(max(score, 0.1), 1.0)
 
