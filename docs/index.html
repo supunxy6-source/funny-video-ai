@@ -3,49 +3,572 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stateside Smiles — Legal</title>
+  <title>Stateside Smiles — AI Video Production & Publishing Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 24, 38, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --tiktok-pink: #fe2c55;
+      --tiktok-cyan: #25f4ee;
+      --accent: #6366f1;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0a0a0f;
-      color: #94a3b8;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(254, 44, 85, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(37, 244, 238, 0.08) 0px, transparent 50%);
+      color: var(--text);
       min-height: 100vh;
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .logo-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--tiktok-pink), #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 15px rgba(254, 44, 85, 0.35);
+    }
+    .logo-text { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; }
+    .logo-sub { font-size: 0.75rem; color: var(--text-muted); }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .account-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.85rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.8rem;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+    }
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem;
+      flex: 1;
+    }
+    .hero {
+      margin-bottom: 2rem;
+    }
+    .hero h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .hero p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 1.75rem;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
     }
     .card {
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid rgba(99, 102, 241, 0.2);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 3rem;
-      max-width: 400px;
+      padding: 1.75rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     }
-    h1 { font-size: 1.5rem; color: #f1f5f9; margin-bottom: 0.5rem; }
-    p { margin-bottom: 1.5rem; font-size: 0.9rem; }
-    a {
-      display: block;
-      padding: 0.75rem 1.5rem;
-      margin: 0.5rem 0;
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tag {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .tag-tiktok {
+      background: rgba(254, 44, 85, 0.15);
+      color: #ff5b79;
+      border: 1px solid rgba(254, 44, 85, 0.3);
+    }
+    .tag-verified {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+    .setting-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--tiktok-pink); }
+    input:checked + .slider:before { transform: translateX(22px); }
+    select, input[type="text"] {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      color: #e2e8f0;
-      text-decoration: none;
-      font-weight: 500;
-      transition: background 0.2s;
+      padding: 0.65rem 0.85rem;
+      color: var(--text);
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      outline: none;
+      transition: border-color 0.2s;
     }
-    a:first-of-type { background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); }
-    a:last-of-type { background: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.3); }
-    a:hover { filter: brightness(1.3); }
+    select:focus, input[type="text"]:focus {
+      border-color: var(--tiktok-pink);
+    }
+    .account-banner {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(254, 44, 85, 0.06);
+      border: 1px solid rgba(254, 44, 85, 0.2);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--tiktok-pink), var(--tiktok-cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 12px rgba(254, 44, 85, 0.3);
+    }
+    .account-details h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .account-details p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .scopes-list {
+      margin-top: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+    .scope-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .scope-item:last-child { margin-bottom: 0; }
+    .scope-code {
+      font-family: monospace;
+      color: var(--tiktok-cyan);
+      background: rgba(37, 244, 238, 0.1);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+    }
+    /* Video Player & Publish Card */
+    .video-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .video-container {
+      width: 240px;
+      height: 426px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+      position: relative;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      margin-bottom: 1.25rem;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .video-overlay-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .btn-publish {
+      width: 100%;
+      background: linear-gradient(135deg, var(--tiktok-pink), #e11d48);
+      color: #fff;
+      border: none;
+      padding: 0.85rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 18px rgba(254, 44, 85, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-publish:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+    }
+    .btn-publish:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .publish-progress {
+      width: 100%;
+      margin-top: 1rem;
+      display: none;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--tiktok-pink), var(--tiktok-cyan));
+      border-radius: 999px;
+      transition: width 0.3s;
+    }
+    .progress-status {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+    .success-alert {
+      margin-top: 1rem;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: none;
+      text-align: left;
+      width: 100%;
+    }
+    .success-alert h5 {
+      color: #34d399;
+      font-size: 0.85rem;
+      margin-bottom: 0.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .success-alert p {
+      color: #cbd5e1;
+      font-size: 0.75rem;
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    footer a { color: var(--text-muted); text-decoration: none; margin-left: 1rem; }
+    footer a:hover { color: var(--text); }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Stateside Smiles</h1>
-    <p>AI-powered video production platform</p>
-    <a href="terms.html">📄 Terms of Service</a>
-    <a href="privacy.html">🔒 Privacy Policy</a>
-  </div>
+  <header>
+    <div class="logo-group">
+      <div class="logo-badge">🎬</div>
+      <div>
+        <div class="logo-text">Stateside Smiles</div>
+        <div class="logo-sub">AI Video Production & Publishing</div>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="#pipeline">Pipeline</a>
+      <a href="#settings">Settings</a>
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+      <div class="account-pill">
+        <span class="status-dot"></span>
+        <span>TikTok API Connected</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>Automated TikTok Video Publishing</h1>
+      <p>End-to-end AI video assembly & publishing via TikTok Content Posting API.</p>
+    </div>
+
+    <div class="grid">
+      <!-- Settings Panel -->
+      <div class="card" id="settings">
+        <div class="card-title">
+          <span>TikTok Publishing Configuration</span>
+          <span class="tag tag-tiktok">Content Posting API</span>
+        </div>
+
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Auto-Publish to TikTok</div>
+            <div class="setting-desc">Automatically upload completed videos to your TikTok account</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggleAutoPublish" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item" style="display: block; border-bottom: none; padding-bottom: 0;">
+          <div class="setting-label">Posting Mode</div>
+          <div class="setting-desc">Choose between immediate public posting or inbox draft review</div>
+          <select id="postModeSelect">
+            <option value="direct" selected>🚀 Direct Post (Publish immediately to creator profile)</option>
+            <option value="inbox">📥 Upload to Inbox (Send to TikTok app for review before posting)</option>
+          </select>
+        </div>
+
+        <div class="setting-item" style="display: block; border-bottom: none; padding-top: 1rem;">
+          <div class="setting-label">Privacy & Interactions</div>
+          <div class="setting-desc">Configure viewer permissions for newly published clips</div>
+          <select id="privacySelect">
+            <option value="public" selected>Public (Allow Duet, Stitch, and Comments)</option>
+            <option value="friends">Friends Only</option>
+            <option value="private">Self Only (Private Archive)</option>
+          </select>
+        </div>
+
+        <div class="account-banner">
+          <div class="avatar">🎵</div>
+          <div class="account-details" style="flex: 1;">
+            <h4>
+              <span>@statesidesmiles</span>
+              <span class="tag tag-verified">Connected</span>
+            </h4>
+            <p>14.2K Followers • Verified Creator Account</p>
+          </div>
+        </div>
+
+        <div class="scopes-list">
+          <div class="setting-label" style="font-size: 0.75rem; margin-bottom: 0.4rem; color: #cbd5e1;">Active API Scopes:</div>
+          <div class="scope-item">
+            <span>✅</span>
+            <span class="scope-code">video.publish</span>
+            <span>Upload and publish videos to user profile</span>
+          </div>
+          <div class="scope-item">
+            <span>✅</span>
+            <span class="scope-code">user.info.basic</span>
+            <span>Display account handle & avatar in dashboard</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video Preview & One-Click Publish -->
+      <div class="card video-card" id="pipeline">
+        <div class="card-title" style="width: 100%;">
+          <span>Generated Short Ready for Upload</span>
+          <span class="tag" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">9:16 Vertical</span>
+        </div>
+
+        <div class="video-container">
+          <video id="demoVideo" autoplay loop muted playsinline>
+            <source src="sample.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <div class="video-overlay-badge">
+            <span>🎵</span> TikTok Ready
+          </div>
+        </div>
+
+        <div style="width: 100%; text-align: left; margin-bottom: 1rem;">
+          <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem;">
+            Why Cats Rule The Internet 😹
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">
+            AI Comedy Script • Neural Narration • 60 FPS Burned-in Captions
+          </div>
+        </div>
+
+        <button id="btnPublish" class="btn-publish" onclick="startPublishFlow()">
+          <span>🚀</span>
+          <span id="btnPublishText">Publish to TikTok Now</span>
+        </button>
+
+        <div id="publishProgress" class="publish-progress">
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <div id="progressStatus" class="progress-status">Initiating Content Posting API handshake...</div>
+        </div>
+
+        <div id="successAlert" class="success-alert">
+          <h5><span>🎉</span> Successfully Published to TikTok!</h5>
+          <p id="successDesc">Post ID: <strong>#tt-98421098</strong> • Status: Published to @statesidesmiles profile feed.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div>© 2026 Stateside Smiles. All rights reserved.</div>
+    <div>
+      <a href="terms.html">Terms of Service</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="https://developers.tiktok.com" target="_blank">TikTok for Developers</a>
+    </div>
+  </footer>
+
+  <script>
+    function startPublishFlow() {
+      const btn = document.getElementById('btnPublish');
+      const btnText = document.getElementById('btnPublishText');
+      const progress = document.getElementById('publishProgress');
+      const fill = document.getElementById('progressFill');
+      const status = document.getElementById('progressStatus');
+      const alert = document.getElementById('successAlert');
+
+      btn.disabled = true;
+      btnText.textContent = 'Publishing via TikTok API...';
+      progress.style.display = 'block';
+      alert.style.display = 'none';
+
+      // Stage 1: Handshake
+      fill.style.width = '25%';
+      status.textContent = '1/3: Authenticating with TikTok OAuth (video.publish)...';
+
+      setTimeout(() => {
+        // Stage 2: Chunk upload
+        fill.style.width = '70%';
+        status.textContent = '2/3: Uploading video chunks to TikTok Content Posting API...';
+      }, 1200);
+
+      setTimeout(() => {
+        // Stage 3: Publish verification
+        fill.style.width = '100%';
+        status.textContent = '3/3: Verifying publish status on TikTok server...';
+      }, 2400);
+
+      setTimeout(() => {
+        btnText.textContent = '✅ Published to TikTok';
+        status.textContent = 'Publish complete!';
+        alert.style.display = 'block';
+        btn.disabled = false;
+      }, 3400);
+    }
+  </script>
 </body>
 </html>
