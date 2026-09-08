@@ -20,6 +20,13 @@ def _build_settings_response() -> SettingsResponse:
     except Exception:
         fb_page_info = None
 
+    # Fetch TikTok account info
+    try:
+        from app.services.tiktok.uploader import get_tiktok_account_info
+        tt_account_info = get_tiktok_account_info()
+    except Exception:
+        tt_account_info = None
+
     return SettingsResponse(
         llm_primary_provider=settings.llm_primary_provider,
         daily_video_count=getattr(settings, "daily_video_count", 3),
@@ -38,6 +45,9 @@ def _build_settings_response() -> SettingsResponse:
         youtube_channel_info=channel_info if channel_info.get("authenticated") else None,
         facebook_auto_publish=getattr(settings, "facebook_auto_publish", True),
         facebook_page_info=fb_page_info if fb_page_info and fb_page_info.get("connected") else None,
+        tiktok_auto_publish=getattr(settings, "tiktok_auto_publish", True),
+        tiktok_post_mode=getattr(settings, "tiktok_post_mode", "direct"),
+        tiktok_account_info=tt_account_info if tt_account_info and tt_account_info.get("connected") else None,
     )
 
 
@@ -74,6 +84,10 @@ async def update_settings(data: SettingsUpdate, _=Depends(require_admin)):
         settings.youtube_playlist_id = data.youtube_playlist_id
     if data.facebook_auto_publish is not None:
         settings.facebook_auto_publish = data.facebook_auto_publish
+    if data.tiktok_auto_publish is not None:
+        settings.tiktok_auto_publish = data.tiktok_auto_publish
+    if data.tiktok_post_mode is not None:
+        settings.tiktok_post_mode = data.tiktok_post_mode
 
     return _build_settings_response()
 

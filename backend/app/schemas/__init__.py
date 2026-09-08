@@ -148,6 +148,7 @@ class UploadResponse(BaseModel):
     video_id: int
     youtube_video_id: Optional[str] = None
     facebook_video_id: Optional[str] = None
+    tiktok_video_id: Optional[str] = None
     title: str
     description: str
     tags: str
@@ -277,6 +278,9 @@ class SettingsResponse(BaseModel):
     youtube_channel_info: Optional[dict] = None
     facebook_auto_publish: bool = True
     facebook_page_info: Optional[dict] = None
+    tiktok_auto_publish: bool = True
+    tiktok_post_mode: str = "direct"
+    tiktok_account_info: Optional[dict] = None
 
 class SettingsUpdate(BaseModel):
     llm_primary_provider: Optional[str] = None
@@ -294,4 +298,6 @@ class SettingsUpdate(BaseModel):
     youtube_auto_publish: Optional[bool] = None
     youtube_default_privacy: Optional[str] = None
     facebook_auto_publish: Optional[bool] = None
+    tiktok_auto_publish: Optional[bool] = None
+    tiktok_post_mode: Optional[str] = None
 

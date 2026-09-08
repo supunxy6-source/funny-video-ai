@@ -15,6 +15,7 @@ class Upload(TimestampMixin, Base):
     video_id: Mapped[int] = mapped_column(ForeignKey("videos.id"), nullable=False, index=True)
     youtube_video_id: Mapped[str | None] = mapped_column(String(50), nullable=True, unique=True)
     facebook_video_id: Mapped[str | None] = mapped_column(String(50), nullable=True, unique=True)
+    tiktok_video_id: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
     title: Mapped[str] = mapped_column(String(100), nullable=False)  # YouTube 100 char limit
     description: Mapped[str] = mapped_column(Text, nullable=False)
     tags: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON array
@@ -37,5 +38,5 @@ class Upload(TimestampMixin, Base):
     video = relationship("Video", lazy="selectin")
 
     def __repr__(self) -> str:
-        return f"<Upload(id={self.id}, yt_id='{self.youtube_video_id}', fb_id='{self.facebook_video_id}', status='{self.status}')>"
+        return f"<Upload(id={self.id}, yt_id='{self.youtube_video_id}', fb_id='{self.facebook_video_id}', tt_id='{self.tiktok_video_id}', status='{self.status}')>"
 

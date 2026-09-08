@@ -416,6 +416,51 @@ def task_upload_facebook(self, prev_result: dict):
         return {**prev_result, "facebook_video_id": None}
 
 
+# ── Step 9c: TikTok Upload ────────────────────────────
+@celery_app.task(bind=True, name="app.tasks.pipeline.task_upload_tiktok", max_retries=2)
+def task_upload_tiktok(self, prev_result: dict):
+    """Upload video to TikTok (if auto-publish enabled)."""
+    pipeline_run_id = prev_result["pipeline_run_id"]
+    if prev_result.get("skip") or not prev_result.get("upload_id"):
+        return prev_result
+
+    async def _execute():
+        step = "tiktok_upload"
+        job_id = await _create_job(pipeline_run_id, step, 9, self.request.id if self.request else None)
+        try:
+            from app.core.config import settings
+            if not getattr(settings, "tiktok_auto_publish", True):
+                await _log(pipeline_run_id, "INFO", "TikTok auto-publish disabled in settings", step, job_id)
+                await _complete_job(job_id, "completed")
+                return {**prev_result, "tiktok_video_id": None}
+
+            tt_token = getattr(settings, "tiktok_access_token", "")
+            tt_client_key = getattr(settings, "tiktok_client_key", "")
+            if not tt_token and not tt_client_key:
+                await _log(pipeline_run_id, "INFO", "TikTok credentials not configured — skipping", step, job_id)
+                await _complete_job(job_id, "completed")
+                return {**prev_result, "tiktok_video_id": None}
+
+            await _log(pipeline_run_id, "INFO", "Uploading to TikTok", step, job_id)
+            from app.services.tiktok.uploader import upload_to_tiktok
+            tt_id = await upload_to_tiktok(prev_result["upload_id"])
+            await _complete_job(job_id, "completed")
+            await _log(pipeline_run_id, "INFO", f"TikTok upload complete: {tt_id}", step, job_id)
+            return {**prev_result, "tiktok_video_id": tt_id}
+        except Exception as exc:
+            await _complete_job(job_id, "failed", str(exc))
+            await _log(pipeline_run_id, "WARNING", f"TikTok upload failed (non-blocking): {exc}", step, job_id)
+            # TikTok failure is non-blocking — return prev_result so pipeline continues
+            return {**prev_result, "tiktok_video_id": None}
+
+    try:
+        return _run_async(_execute())
+    except Exception as exc:
+        # Even retries exhausted — don't block the pipeline
+        logger.warning(f"TikTok upload task failed after retries: {exc}")
+        return {**prev_result, "tiktok_video_id": None}
+
+
 # ── Step 10: Notification ──────────────────────────────
 @celery_app.task(bind=True, name="app.tasks.pipeline.task_notify", max_retries=1)
 def task_notify(self, prev_result: dict):
@@ -434,9 +479,10 @@ def task_notify(self, prev_result: dict):
                     error_message="No verified stories found today",
                     pipeline_run_id=pipeline_run_id,
                 )
-            elif prev_result.get("youtube_video_id") or prev_result.get("facebook_video_id"):
+            elif prev_result.get("youtube_video_id") or prev_result.get("facebook_video_id") or prev_result.get("tiktok_video_id"):
                 yt_id = prev_result.get("youtube_video_id")
                 fb_id = prev_result.get("facebook_video_id")
+                tt_id = prev_result.get("tiktok_video_id")
                 yt_url = (
                     f"https://youtube.com/watch?v={yt_id}"
                     if yt_id and not str(yt_id).startswith("local_")
@@ -447,12 +493,18 @@ def task_notify(self, prev_result: dict):
                     if fb_id
                     else None
                 )
+                tt_url = (
+                    f"https://www.tiktok.com/@user/video/{tt_id}"
+                    if tt_id
+                    else None
+                )
                 await notifier.notify_success(
-                    title=f"Video {yt_id or fb_id}",
+                    title=f"Video {yt_id or fb_id or tt_id}",
                     youtube_url=yt_url,
                     duration=0,
                     processing_time=0,
                     facebook_url=fb_url,
+                    tiktok_url=tt_url,
                 )
             await _complete_job(job_id, "completed")
         except Exception as exc:
@@ -589,18 +641,37 @@ async def produce_single_story_pipeline(story: dict, pipeline_run_id: str, story
                 await _complete_job(job_id, "completed", error=f"Facebook upload warning: {exc}")
                 await _log(pipeline_run_id, "WARNING", f"[{story_index}/{total_stories}] Facebook upload failed (non-blocking): {exc}", "facebook_upload", job_id)
 
+    # Step 9c: TikTok Upload (independent of YouTube/Facebook)
+    tt_id = None
+    if getattr(settings, "tiktok_auto_publish", True) and upload_id:
+        tt_token = getattr(settings, "tiktok_access_token", "")
+        tt_client_key = getattr(settings, "tiktok_client_key", "")
+        if tt_token or tt_client_key:
+            job_id = await _create_job(pipeline_run_id, f"tiktok_upload_{story_index}", 9)
+            try:
+                await _log(pipeline_run_id, "INFO", f"[{story_index}/{total_stories}] Uploading to TikTok", "tiktok_upload", job_id)
+                from app.services.tiktok.uploader import upload_to_tiktok
+                tt_id = await upload_to_tiktok(upload_id)
+                await _complete_job(job_id, "completed")
+                await _log(pipeline_run_id, "INFO", f"[{story_index}/{total_stories}] 🎉 Published to TikTok: {tt_id}", "tiktok_upload", job_id)
+            except Exception as exc:
+                await _complete_job(job_id, "completed", error=f"TikTok upload warning: {exc}")
+                await _log(pipeline_run_id, "WARNING", f"[{story_index}/{total_stories}] TikTok upload failed (non-blocking): {exc}", "tiktok_upload", job_id)
+
 
     # Step 10: Notification
     job_id = await _create_job(pipeline_run_id, f"notification_{story_index}", 10)
     try:
         yt_url = f"https://youtube.com/watch?v={yt_id}" if yt_id and not str(yt_id).startswith("local_") else "Local Video Rendered"
         fb_url = f"https://facebook.com/{fb_id}" if fb_id else None
+        tt_url = f"https://www.tiktok.com/@user/video/{tt_id}" if tt_id else None
         await notifier.notify_success(
             title=f"Video #{video_id} ({headline})",
             youtube_url=yt_url,
             duration=0,
             processing_time=0,
             facebook_url=fb_url,
+            tiktok_url=tt_url,
         )
         await _complete_job(job_id, "completed")
     except Exception as notif_err:
@@ -614,6 +685,7 @@ async def produce_single_story_pipeline(story: dict, pipeline_run_id: str, story
         "upload_id": upload_id,
         "youtube_video_id": yt_id,
         "facebook_video_id": fb_id,
+        "tiktok_video_id": tt_id,
         "status": "completed",
     }
 
@@ -738,6 +810,7 @@ def run_full_pipeline(video_count: int = None, pipeline_run_id: str = None):
         task_optimize_seo.s(),
         task_upload_youtube.s(),
         task_upload_facebook.s(),
+        task_upload_tiktok.s(),
         task_notify.s(),
     )
 

@@ -1,4 +1,4 @@
-"""Uploads endpoints — YouTube and Facebook upload status and manual publish."""
+"""Uploads endpoints — YouTube, Facebook, and TikTok upload status and manual publish."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, desc
@@ -25,6 +25,13 @@ async def get_facebook_page_status(_=Depends(get_current_user)):
     """Get connected Facebook Page information and status."""
     from app.services.facebook.uploader import get_facebook_page_info
     return get_facebook_page_info()
+
+
+@router.get("/tiktok/account")
+async def get_tiktok_account_status(_=Depends(get_current_user)):
+    """Get connected TikTok account information and status."""
+    from app.services.tiktok.uploader import get_tiktok_account_info
+    return get_tiktok_account_info()
 
 
 @router.get("")
@@ -95,8 +102,12 @@ async def create_and_publish_upload(
     from app.tasks.pipeline import task_upload_facebook
     task_upload_facebook.delay(task_payload)
 
+    # Trigger TikTok upload
+    from app.tasks.pipeline import task_upload_tiktok
+    task_upload_tiktok.delay(task_payload)
+
     return {
-        "message": f"Publishing video #{video.id} to YouTube and Facebook as '{data.privacy_status}'",
+        "message": f"Publishing video #{video.id} to YouTube, Facebook, and TikTok as '{data.privacy_status}'",
         "upload_id": upload.id,
         "privacy_status": upload.privacy_status,
         "status": "upload_triggered",
@@ -136,5 +147,9 @@ async def publish_upload(
     from app.tasks.pipeline import task_upload_facebook
     task_upload_facebook.delay(task_payload)
 
-    return {"message": "Upload triggered to YouTube and Facebook", "upload_id": upload_id}
+    # Trigger TikTok upload
+    from app.tasks.pipeline import task_upload_tiktok
+    task_upload_tiktok.delay(task_payload)
+
+    return {"message": "Upload triggered to YouTube, Facebook, and TikTok", "upload_id": upload_id}
 

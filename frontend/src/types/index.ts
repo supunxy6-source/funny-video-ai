@@ -90,6 +90,30 @@ export interface Settings {
     thumbnail_url?: string;
     error?: string;
   };
+  facebook_auto_publish?: boolean;
+  facebook_page_info?: {
+    connected: boolean;
+    page_id?: string;
+    name?: string;
+    category?: string;
+    fan_count?: number;
+    followers_count?: number;
+    link?: string;
+    error?: string;
+  };
+  tiktok_auto_publish?: boolean;
+  tiktok_post_mode?: string;
+  tiktok_account_info?: {
+    connected: boolean;
+    open_id?: string;
+    display_name?: string;
+    avatar_url?: string;
+    follower_count?: number;
+    following_count?: number;
+    likes_count?: number;
+    video_count?: number;
+    error?: string;
+  };
 }
 
 export interface Job {
@@ -110,6 +134,8 @@ export interface Upload {
   id: number;
   video_id: number;
   youtube_video_id?: string;
+  facebook_video_id?: string;
+  tiktok_video_id?: string;
   title: string;
   description: string;
   tags: string;

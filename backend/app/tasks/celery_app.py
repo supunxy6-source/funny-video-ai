@@ -57,6 +57,8 @@ celery_app.conf.update(
         "app.tasks.pipeline.task_generate_thumbnails": {"queue": "production"},
         "app.tasks.pipeline.task_optimize_seo": {"queue": "production"},
         "app.tasks.pipeline.task_upload_youtube": {"queue": "upload"},
+        "app.tasks.pipeline.task_upload_facebook": {"queue": "upload"},
+        "app.tasks.pipeline.task_upload_tiktok": {"queue": "upload"},
         "app.tasks.pipeline.task_notify": {"queue": "default"},
     },
 )

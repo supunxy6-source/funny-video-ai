@@ -116,6 +116,13 @@ class Settings(BaseSettings):
     facebook_page_access_token: str = ""
     facebook_auto_publish: bool = True
 
+    # ── TikTok ────────────────────────────────────────
+    tiktok_client_key: str = ""
+    tiktok_client_secret: str = ""
+    tiktok_access_token: str = ""
+    tiktok_auto_publish: bool = True
+    tiktok_post_mode: str = "direct"  # direct | inbox
+
     # ── Whisper ────────────────────────────────────────
     whisper_model: str = "base"
     whisper_device: str = "cpu"

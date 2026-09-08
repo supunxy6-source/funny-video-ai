@@ -29,6 +29,7 @@ class Notifier:
         duration: float,
         processing_time: float,
         facebook_url: str = None,
+        tiktok_url: str = None,
     ) -> None:
         """Send success notification."""
         message = (
@@ -38,6 +39,8 @@ class Notifier:
         )
         if facebook_url:
             message += f"📘 Facebook: {facebook_url}\n"
+        if tiktok_url:
+            message += f"🎵 TikTok: {tiktok_url}\n"
         message += (
             f"⏱️ Duration: {duration:.1f} minutes\n"
             f"🕐 Processing Time: {processing_time:.1f} minutes\n"

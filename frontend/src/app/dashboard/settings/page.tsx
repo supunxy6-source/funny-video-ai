@@ -22,6 +22,8 @@ export default function SettingsPage() {
     videoFormat?: string;
     youtubeAutoPublish?: boolean;
     youtubeDefaultPrivacy?: string;
+    tiktokAutoPublish?: boolean;
+    tiktokPostMode?: string;
   }>({});
   const [saving, setSaving] = useState(false);
 
@@ -35,6 +37,8 @@ export default function SettingsPage() {
   const videoFormat = formState.videoFormat ?? settings?.video_format ?? 'shorts';
   const youtubeAutoPublish = formState.youtubeAutoPublish ?? settings?.youtube_auto_publish ?? true;
   const youtubeDefaultPrivacy = formState.youtubeDefaultPrivacy ?? settings?.youtube_default_privacy ?? 'public';
+  const tiktokAutoPublish = formState.tiktokAutoPublish ?? settings?.tiktok_auto_publish ?? true;
+  const tiktokPostMode = formState.tiktokPostMode ?? settings?.tiktok_post_mode ?? 'direct';
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +56,8 @@ export default function SettingsPage() {
           video_format: videoFormat,
           youtube_auto_publish: youtubeAutoPublish,
           youtube_default_privacy: youtubeDefaultPrivacy,
+          tiktok_auto_publish: tiktokAutoPublish,
+          tiktok_post_mode: tiktokPostMode,
         }),
       });
       alert('Settings updated successfully!');
@@ -142,6 +148,45 @@ export default function SettingsPage() {
                       <option value="public">🌐 Public (Instantly visible to all YouTube viewers & Shorts feed)</option>
                       <option value="unlisted">🔗 Unlisted (Visible only to anyone with the video link)</option>
                       <option value="private">🔒 Private (Visible only to you for review before publishing)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* TikTok Publishing Options */}
+              <div className="p-4 rounded-xl bg-pink-950/20 border border-pink-800/30 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-pink-200 flex items-center gap-2">
+                      <span>🎵</span> TikTok Publishing
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Automatically upload rendered videos to your TikTok account via the Content Posting API.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tiktokAutoPublish}
+                      onChange={(e) => setFormState((prev) => ({ ...prev, tiktokAutoPublish: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                  </label>
+                </div>
+
+                {tiktokAutoPublish && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                      Posting Mode
+                    </label>
+                    <select
+                      value={tiktokPostMode}
+                      onChange={(e) => setFormState((prev) => ({ ...prev, tiktokPostMode: e.target.value }))}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-pink-500"
+                    >
+                      <option value="direct">🚀 Direct Post (Publish immediately to your TikTok profile)</option>
+                      <option value="inbox">📥 Upload to Inbox (Send to TikTok app for review before posting)</option>
                     </select>
                   </div>
                 )}
@@ -293,6 +338,64 @@ export default function SettingsPage() {
             )}
           </Card>
 
+          <Card title="Connected TikTok Account">
+            {settings?.tiktok_account_info?.connected ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  {settings.tiktok_account_info.avatar_url ? (
+                    <img
+                      src={settings.tiktok_account_info.avatar_url}
+                      alt="TikTok Avatar"
+                      className="w-12 h-12 rounded-full border border-pink-500/30"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-pink-600/20 text-pink-500 flex items-center justify-center text-xl font-bold border border-pink-500/30">
+                      🎵
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-100">
+                      {settings.tiktok_account_info.display_name}
+                    </h4>
+                    <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      API Connected & Active
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-900/50 border border-slate-800/80">
+                    <span className="text-slate-500 block">Followers</span>
+                    <span className="text-slate-100 font-semibold">{settings.tiktok_account_info.follower_count ?? 0}</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900/50 border border-slate-800/80">
+                    <span className="text-slate-500 block">Likes</span>
+                    <span className="text-slate-100 font-semibold">{settings.tiktok_account_info.likes_count ?? 0}</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900/50 border border-slate-800/80">
+                    <span className="text-slate-500 block">Videos</span>
+                    <span className="text-slate-100 font-semibold">{settings.tiktok_account_info.video_count ?? 0}</span>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-400 space-y-1">
+                  <div>Post Mode: <Badge variant="success">{tiktokPostMode === 'direct' ? 'DIRECT POST' : 'INBOX'}</Badge></div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center text-xl mb-2">
+                  ⚠️
+                </div>
+                <p className="text-xs font-semibold text-slate-200">TikTok Account Not Connected</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Set <code>TIKTOK_ACCESS_TOKEN</code> in .env or complete the TikTok OAuth setup.
+                </p>
+              </div>
+            )}
+          </Card>
+
           <Card title="Production Summary">
             <div className="space-y-3 text-xs text-slate-300">
               <div className="flex justify-between py-1 border-b border-slate-800">
@@ -302,6 +405,10 @@ export default function SettingsPage() {
               <div className="flex justify-between py-1 border-b border-slate-800">
                 <span className="text-slate-400">Auto YouTube Upload:</span>
                 <span className="font-semibold">{youtubeAutoPublish ? '✅ Enabled' : '⏸️ Manual Only'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-800">
+                <span className="text-slate-400">Auto TikTok Upload:</span>
+                <span className="font-semibold">{tiktokAutoPublish ? '✅ Enabled' : '⏸️ Manual Only'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-800">
                 <span className="text-slate-400">Format:</span>
