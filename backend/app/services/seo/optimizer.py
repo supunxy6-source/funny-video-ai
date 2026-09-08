@@ -31,6 +31,11 @@ from app.services.scriptwriter.prompts import (
     SEO_DESCRIPTION_PROMPT,
     SEO_TAGS_PROMPT,
 )
+from app.services.scriptwriter.entertainment_prompts import (
+    ENTERTAINMENT_SEO_TITLE_PROMPT,
+    ENTERTAINMENT_SEO_DESCRIPTION_PROMPT,
+    ENTERTAINMENT_SEO_TAGS_PROMPT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +157,7 @@ class SEOOptimizer:
         # Generate hashtags — expanded for Shorts discovery with niche tags
         if content_mode == "entertainment":
             base_hashtags = [
-                "#Funny", "#Memes", "#Comedy", "#Viral",
+                "#Shorts", "#Funny", "#Memes", "#Comedy", "#Viral",
                 "#Trending", "#TryNotToLaugh", "#StatesideSmiles",
             ]
         else:
@@ -165,12 +170,31 @@ class SEOOptimizer:
         for word in topic_words[:3]:
             clean_word = re.sub(r'[^a-zA-Z0-9]', '', word).capitalize()
             if clean_word and len(clean_word) >= 4:
+                if content_mode == "entertainment" and any(bad in clean_word.lower() for bad in ["news", "breaking"]):
+                    continue
                 niche_hashtags.append(f"#{clean_word}")
-        extra_hashtags = [
-            f"#{tag.replace(' ', '')}"
-            for tag in tags if tag not in base_tags and not tag.startswith("#")
-        ][:5]
-        hashtags = list(dict.fromkeys(base_hashtags + niche_hashtags + extra_hashtags))
+
+        if content_mode == "entertainment":
+            # Sanitize tags: strictly remove any news keywords from entertainment tags
+            tags = [
+                t for t in tags
+                if not any(bad in t.lower() for bad in ["breaking news", "world news", "news shorts", "news today", "news briefing", "breaking"])
+            ]
+            extra_hashtags = [
+                f"#{tag.replace(' ', '')}"
+                for tag in tags if tag not in base_tags and not tag.startswith("#")
+                and not any(bad in tag.lower() for bad in ["breakingnews", "news", "worldnews", "breaking"])
+            ][:5]
+            hashtags = [
+                h for h in list(dict.fromkeys(base_hashtags + niche_hashtags + extra_hashtags))
+                if not any(bad in h.lower() for bad in ["breakingnews", "news", "worldnews", "breaking"])
+            ]
+        else:
+            extra_hashtags = [
+                f"#{tag.replace(' ', '')}"
+                for tag in tags if tag not in base_tags and not tag.startswith("#")
+            ][:5]
+            hashtags = list(dict.fromkeys(base_hashtags + niche_hashtags + extra_hashtags))
 
         # Generate engagement-optimized pinned comment with polarizing debate hooks
         pinned_comment = await self._generate_pinned_comment(topic, seo_title)
@@ -198,11 +222,18 @@ class SEOOptimizer:
         
         Now generates 3 variants and picks the one with the highest CTR score.
         """
+        content_mode = getattr(settings, "content_mode", "entertainment")
         try:
-            prompt = SEO_TITLE_PROMPT.format(
-                topic=topic,
-                script_title=script_title,
-            )
+            if content_mode == "entertainment":
+                prompt = ENTERTAINMENT_SEO_TITLE_PROMPT.format(
+                    topic=topic,
+                    script_title=script_title,
+                )
+            else:
+                prompt = SEO_TITLE_PROMPT.format(
+                    topic=topic,
+                    script_title=script_title,
+                )
             response = await self.llm.generate(prompt, max_tokens=200, temperature=0.9)
             
             # Parse multiple title variants from the response
@@ -262,13 +293,21 @@ class SEOOptimizer:
         chapters: str,
     ) -> str:
         """Generate a YouTube video description."""
+        content_mode = getattr(settings, "content_mode", "entertainment")
         try:
-            prompt = SEO_DESCRIPTION_PROMPT.format(
-                title=title,
-                topic_summary=topic,
-                scene_titles=", ".join(scene_titles),
-                source_urls="Sources cited in the video",
-            )
+            if content_mode == "entertainment":
+                prompt = ENTERTAINMENT_SEO_DESCRIPTION_PROMPT.format(
+                    title=title,
+                    topic_summary=topic,
+                    scene_titles=", ".join(scene_titles),
+                )
+            else:
+                prompt = SEO_DESCRIPTION_PROMPT.format(
+                    title=title,
+                    topic_summary=topic,
+                    scene_titles=", ".join(scene_titles),
+                    source_urls="Sources cited in the video",
+                )
             description = await self.llm.generate(prompt, max_tokens=1500, temperature=0.7)
             description = description.strip()
             
@@ -289,24 +328,41 @@ class SEOOptimizer:
             # Build a clean fallback description with keyword front-loading
             clean_title = _sanitize_seo_title(title)
             now = datetime.now(timezone.utc)
-            desc = (
-                f"{clean_title}\n\n"
-                f"{topic}\n\n"
-                f"📰 Get the latest news in 60 seconds — {now.strftime('%B %Y')}\n\n"
-                f"💬 What do you think? Comment below!\n"
-                f"🔔 Follow for daily news updates\n\n"
-                f"#Shorts #News #Trending #BreakingNews #NewsToday"
-            )
+            if content_mode == "entertainment":
+                desc = (
+                    f"{clean_title}\n\n"
+                    f"{topic}\n\n"
+                    f"😂 Daily comedy, viral memes & funny stories!\n\n"
+                    f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@StatesideSmiles?sub_confirmation=1\n\n"
+                    f"💬 Which part made you laugh the hardest? Drop your comment below! 👇\n\n"
+                    f"#Shorts #Funny #Memes #Comedy #TryNotToLaugh #StatesideSmiles"
+                )
+            else:
+                desc = (
+                    f"{clean_title}\n\n"
+                    f"{topic}\n\n"
+                    f"📰 Get the latest news in 60 seconds — {now.strftime('%B %Y')}\n\n"
+                    f"💬 What do you think? Comment below!\n"
+                    f"🔔 Follow for daily news updates\n\n"
+                    f"#Shorts #News #Trending #BreakingNews #NewsToday"
+                )
             return _sanitize_description(desc)
 
     async def _generate_tags(self, title: str, topic: str, category: str) -> list[str]:
         """Generate YouTube tags."""
+        content_mode = getattr(settings, "content_mode", "entertainment")
         try:
-            prompt = SEO_TAGS_PROMPT.format(
-                title=title,
-                topic_summary=topic,
-                category=category,
-            )
+            if content_mode == "entertainment":
+                prompt = ENTERTAINMENT_SEO_TAGS_PROMPT.format(
+                    title=title,
+                    topic_summary=topic,
+                )
+            else:
+                prompt = SEO_TAGS_PROMPT.format(
+                    title=title,
+                    topic_summary=topic,
+                    category=category,
+                )
             response = await self.llm.generate(prompt, max_tokens=500, temperature=0.7)
 
             # Parse JSON array
@@ -314,19 +370,32 @@ class SEOOptimizer:
             if text.startswith("```"):
                 text = text.split("\n", 1)[1].rsplit("```", 1)[0]
             tags = json.loads(text)
-            return [t.strip() for t in tags if t.strip()][:30]
+            if content_mode == "entertainment":
+                tags = [t.strip() for t in tags if t.strip() and not any(bad in t.lower() for bad in ["news", "breaking"])][:30]
+            else:
+                tags = [t.strip() for t in tags if t.strip()][:30]
+            return tags
 
         except Exception as e:
             logger.warning(f"Tag generation failed: {e}")
             # Enhanced fallback tags with Shorts discovery and topic keywords
             words = topic.split()[:10]
             now = datetime.now(timezone.utc)
-            return [
-                "shorts", "youtubeshorts", "ytshorts", "viral shorts",
-                "news", "breaking news", "world news", "news today",
-                f"news {now.strftime('%B').lower()} {now.year}",
-                "trending", "trending today",
-            ] + [w.lower() for w in words if len(w) > 3]
+            if content_mode == "entertainment":
+                return [
+                    "shorts", "youtubeshorts", "ytshorts", "viral shorts",
+                    "funny", "memes", "comedy", "try not to laugh",
+                    "funny videos", "meme compilation", "funny memes",
+                    f"memes {now.strftime('%B').lower()} {now.year}",
+                    "trending memes", "stateside smiles",
+                ] + [w.lower() for w in words if len(w) > 3 and not any(bad in w.lower() for bad in ["news", "breaking"])]
+            else:
+                return [
+                    "shorts", "youtubeshorts", "ytshorts", "viral shorts",
+                    "news", "breaking news", "world news", "news today",
+                    f"news {now.strftime('%B').lower()} {now.year}",
+                    "trending", "trending today",
+                ] + [w.lower() for w in words if len(w) > 3]
 
     def _generate_chapters(self, scenes: list[dict]) -> str:
         """Generate timestamp chapters from scenes."""

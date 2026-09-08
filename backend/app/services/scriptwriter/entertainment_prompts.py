@@ -472,11 +472,14 @@ DESCRIPTION STRUCTURE:
 3. 2-3 sentences describing what's in the video (be genuine and funny, not clickbait)
 4. EMPTY LINE
 5. "😂 New comedy videos daily — Subscribe to Stateside Smiles!"
-6. "💬 Drop your funniest comment below!"
-7. EMPTY LINE
-8. Hashtags: #funny #memes #comedy #viral #trending #trynottolaugh #statesidesmiles #[TopicSpecificTag]
+6. "👉 Subscribe for daily laughs: https://youtube.com/@StatesideSmiles?sub_confirmation=1"
+7. "💬 Drop your funniest comment below! 👇"
+8. EMPTY LINE
+9. Hashtags: #Shorts #funny #memes #comedy #viral #trending #trynottolaugh #statesidesmiles #[TopicSpecificTag]
 
 RULES:
+- STRICTLY FORBIDDEN: NEVER include #BreakingNews, #News, #WorldNews, #NewsToday, or news phrases.
+- This is 100% comedy and entertainment for the channel "Stateside Smiles".
 - Under 800 characters total
 - Sound genuine and funny, not corporate
 - 2-3 emojis max

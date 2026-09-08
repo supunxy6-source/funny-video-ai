@@ -464,7 +464,8 @@ def _extract_from_json_text(text: str, field_type: str) -> str:
                 extracted = match.group(1).strip()
                 if not _looks_like_json(extracted):
                     return extracted
-        return f"Daily News Briefing — {today}"
+        mode = getattr(settings, "content_mode", "entertainment")
+        return f"Funniest Comedy Today — {today}" if mode == "entertainment" else f"Daily News Briefing — {today}"
     else:
         # For descriptions, try known fields first
         for key in ["description", "text", "summary", "content"]:
@@ -480,4 +481,11 @@ def _extract_from_json_text(text: str, field_type: str) -> str:
         cleaned = cleaned.strip('"\',')
         if len(cleaned) > 20:
             return cleaned
+        mode = getattr(settings, "content_mode", "entertainment")
+        if mode == "entertainment":
+            return (
+                f"Daily comedy & viral memes for {today}. 😂\n\n"
+                f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@StatesideSmiles?sub_confirmation=1\n\n"
+                f"#Shorts #Funny #Memes #Comedy #StatesideSmiles"
+            )
         return f"AI-generated news briefing for {today}. Subscribe for daily updates."
