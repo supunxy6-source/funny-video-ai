@@ -10,7 +10,13 @@
 set -e
 
 # Ensure media directories exist (works even on existing volumes)
-mkdir -p /app/media/generated /app/media/temp /app/media/thumbnails
+# Remove stale files that conflict with expected directory paths
+for dir in /app/media/generated /app/media/temp /app/media/thumbnails; do
+    if [ -f "$dir" ]; then
+        rm -f "$dir"
+    fi
+    mkdir -p "$dir"
+done
 
 # If running as root AND appuser exists, fix ownership and drop privileges
 if [ "$(id -u)" = "0" ]; then
