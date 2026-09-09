@@ -444,19 +444,19 @@ ENTERTAINMENT_SEO_TITLE_PROMPT = """Generate 3 YouTube title variants for this c
 Topic: {topic}
 Script Title: {script_title}
 
-VIRAL COMEDY TITLE FORMULAS (2026):
-- STRICTLY under 60 characters
-- Do NOT add #Shorts — YouTube auto-detects vertical video format
-- Use ONE of these proven viral comedy formulas:
-  * TRY NOT TO LAUGH: "Try Not To Laugh Challenge — September 2026"
-  * SUPERLATIVE: "The Funniest Memes I've Ever Seen"
-  * RELATABLE: "POV: Things That Are Way Too Relatable"
-  * COMPILATION: "Memes That Hit Different at 3AM"
-  * REACTION: "Reacting to the Internet's Funniest Moments"
-  * CHALLENGE: "If You Laugh You Subscribe"
-- Include at least ONE power word: funniest, hilarious, impossible, insane, best, worst, epic, cursed, blessed
-- Include emoji if appropriate (max 1-2): 😂💀🤣
-- NEVER use generic phrases like "Funny Video" or "Comedy Compilation #47"
+VIRAL COMEDY TITLE FORMULAS (2026 FOR YOUTUBE SHORTS):
+- STRICTLY under 65 characters and must be a COMPLETE, coherent sentence or phrase.
+- Do NOT add #Shorts — the system appends it automatically.
+- STRICT SAFETY RULES (MANDATORY):
+  * NEVER use words related to murder, killing, death, blood, violence, self-harm, sexual content/slang, or illegal acts.
+  * Every title must be advertiser-friendly and 100% compliant with YouTube Community Guidelines.
+- Use ONE of these proven high-CTR curiosity formulas:
+  * CURIOSITY GAP: "Wait till the end... instant regret 😭", "He really thought nobody was looking 💀"
+  * RELATABLE DISBELIEF: "The disrespect is completely out of hand 😂", "Tag someone who needs this immediately 💀"
+  * WITTY OBSERVATION: "My last two braincells trying their best 😭", "Bro took this way too seriously 💀"
+  * HYPERBOLE / SURPRISE: "He really built a car with TWO front ends 💀🚗", "The one place you should NEVER enter 💀"
+- Include at least ONE power word or emotional reaction emoji (😂, 💀, 😭, 🤣).
+- NEVER use generic phrases like "Funny Video" or cut off mid-sentence.
 
 Respond with ONLY 3 title variants, one per line, nothing else."""
 

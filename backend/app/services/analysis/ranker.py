@@ -10,6 +10,7 @@ stories with high-engagement keywords, emotional triggers, and topic
 crossover appeal. Rebalanced category scores for Shorts performance.
 """
 
+import json
 import logging
 import re
 from datetime import datetime, timezone
@@ -18,9 +19,11 @@ from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.session import async_session_factory
 from app.models.article import NewsArticle
 from app.models.source import Source
+from app.models.script import Script
 
 logger = logging.getLogger(__name__)
 
@@ -49,22 +52,44 @@ CATEGORY_IMPORTANCE = {
     "general": 0.65,
 }
 
-# Keywords that indicate viral potential on YouTube Shorts
-VIRAL_KEYWORDS = {
-    "tier1": [  # Highest viral potential — controversy, disaster, big money
-        "killed", "dead", "dies", "death", "murder", "shooting", "explosion",
-        "crash", "disaster", "earthquake", "hurricane", "war", "attack",
+# Strict safety filter: content containing these words will be rejected to protect channel reputation
+BANNED_POLICY_KEYWORDS = [
+    "murder", "killing", "killed", "humping", "suicide", "terrorist", "terrorism",
+    "rape", "assault", "execution", "pedophile", "porn", "nude", "nsfw",
+    "incitement to murder", "beheaded", "massacre",
+]
+
+# Keywords that indicate viral potential on YouTube Shorts (separated by mode)
+COMEDY_VIRAL_KEYWORDS = {
+    "tier1": [
+        "hilarious", "instant regret", "wait for it", "try not to laugh",
+        "caught on camera", "gone wrong", "unexpected", "epic fail",
+        "impossible", "genius", "chaos", "worst mistake", "unbelievable",
+    ],
+    "tier2": [
+        "meme", "relatable", "funny", "cat", "dog", "prank", "joke",
+        "crying laughing", "wild", "crazy", "insane", "awkward", "clueless",
+    ],
+    "tier3": [
+        "secret", "hack", "trick", "watch till end", "who did this",
+        "what happened", "actually", "why", "how",
+    ],
+}
+
+NEWS_VIRAL_KEYWORDS = {
+    "tier1": [
         "billion", "million", "trillion", "scandal", "exposed", "leaked",
         "arrested", "fired", "resigned", "banned", "illegal", "fraud",
+        "disaster", "earthquake", "hurricane",
     ],
-    "tier2": [  # High viral — celebrity, tech, emotion
+    "tier2": [
         "ai", "artificial intelligence", "elon musk", "tesla", "apple",
         "google", "openai", "chatgpt", "crypto", "bitcoin", "celebrity",
         "famous", "viral", "shocking", "incredible", "insane", "record",
         "first ever", "never before", "historic", "breakthrough",
-        "warning", "emergency", "urgent", "crisis", "pandemic",
+        "warning", "emergency", "urgent", "crisis",
     ],
-    "tier3": [  # Medium viral — curiosity, trends
+    "tier3": [
         "secret", "hidden", "revealed", "truth", "actually", "real reason",
         "why", "how", "what if", "nobody knows", "surprised", "unexpected",
         "strange", "mysterious", "new law", "new rule", "price", "cost",
@@ -161,35 +186,43 @@ class StoryRanker:
         """Score the viral potential of a story cluster for YouTube Shorts.
         
         Analyzes headlines and summaries for:
-        - High-engagement trigger keywords (tiered)
+        - Strict policy check (disqualifies banned/NSFW keywords)
+        - High-engagement trigger keywords (mode-aware)
         - Headline punchiness (shorter = more viral)
         - Multi-category crossover appeal
         - Emotional intensity signals
         """
-        score = 0.3  # Base score
-        
         # Combine all text for keyword analysis
         all_text = " ".join(
             (a.get("headline", "") + " " + (a.get("summary", "") or "")).lower()
             for a in articles
         )
+
+        # Policy check: Disqualify any cluster containing banned terms
+        if any(banned in all_text for banned in BANNED_POLICY_KEYWORDS):
+            return 0.0
+
+        content_mode = getattr(settings, "content_mode", "entertainment")
+        keywords_dict = COMEDY_VIRAL_KEYWORDS if content_mode == "entertainment" else NEWS_VIRAL_KEYWORDS
+
+        score = 0.3  # Base score
         
         # Tier 1 keywords (highest viral signal)
-        tier1_matches = sum(1 for kw in VIRAL_KEYWORDS["tier1"] if kw in all_text)
+        tier1_matches = sum(1 for kw in keywords_dict["tier1"] if kw in all_text)
         if tier1_matches >= 3:
             score += 0.35
         elif tier1_matches >= 1:
             score += 0.25
         
         # Tier 2 keywords (high viral signal)
-        tier2_matches = sum(1 for kw in VIRAL_KEYWORDS["tier2"] if kw in all_text)
+        tier2_matches = sum(1 for kw in keywords_dict["tier2"] if kw in all_text)
         if tier2_matches >= 3:
             score += 0.20
         elif tier2_matches >= 1:
             score += 0.12
         
         # Tier 3 keywords (medium viral signal)
-        tier3_matches = sum(1 for kw in VIRAL_KEYWORDS["tier3"] if kw in all_text)
+        tier3_matches = sum(1 for kw in keywords_dict["tier3"] if kw in all_text)
         if tier3_matches >= 2:
             score += 0.10
         elif tier3_matches >= 1:
@@ -221,11 +254,28 @@ async def rank_stories() -> list[dict]:
     """
     Main ranking entry point called by Celery task.
     Ranks all story clusters and returns them sorted by score.
+    Strictly filters out:
+    1. Clusters whose articles have already been turned into a Script (deduplication)
+    2. Clusters containing banned policy keywords (safety filter)
     """
     ranker = StoryRanker()
 
     async with async_session_factory() as db:
-        # Get all unique cluster IDs
+        # Step A: Collect all article IDs already used in generated scripts
+        script_res = await db.execute(select(Script.article_ids))
+        used_article_ids = set()
+        for (aid_json,) in script_res.all():
+            if aid_json:
+                try:
+                    loaded = json.loads(aid_json)
+                    if isinstance(loaded, list):
+                        used_article_ids.update(loaded)
+                    elif isinstance(loaded, int):
+                        used_article_ids.add(loaded)
+                except Exception:
+                    pass
+
+        # Step B: Get all unique cluster IDs
         result = await db.execute(
             select(NewsArticle.cluster_id)
             .where(NewsArticle.cluster_id.is_not(None))
@@ -249,6 +299,11 @@ async def rank_stories() -> list[dict]:
                 select(NewsArticle).where(NewsArticle.cluster_id == cluster_id)
             )
             articles = articles_result.scalars().all()
+
+            # DEDUPLICATION: Skip cluster if any article in it has already been used in a Script
+            if any(a.id in used_article_ids for a in articles):
+                continue
+
             article_dicts = [
                 {
                     "id": a.id,
@@ -261,8 +316,18 @@ async def rank_stories() -> list[dict]:
                 for a in articles
             ]
 
+            # SAFETY: Skip cluster if top headline or summary has banned words
+            all_text = " ".join(
+                (a.get("headline", "") + " " + (a.get("summary", "") or "")).lower()
+                for a in article_dicts
+            )
+            if any(banned in all_text for banned in BANNED_POLICY_KEYWORDS):
+                logger.warning(f"🛡️ Skipping policy-violating cluster {cluster_id}: '{article_dicts[0]['headline'][:50]}'")
+                continue
+
             score = ranker.score_cluster(cluster_id, article_dicts, trust_map)
-            scored_clusters.append(score)
+            if score.get("total_score", 0) > 0:
+                scored_clusters.append(score)
 
         # Sort by total score descending
         scored_clusters.sort(key=lambda x: x["total_score"], reverse=True)
@@ -270,11 +335,11 @@ async def rank_stories() -> list[dict]:
         if scored_clusters:
             top = scored_clusters[0]
             logger.info(
-                f"📊 Ranked {len(scored_clusters)} story clusters. "
+                f"📊 Ranked {len(scored_clusters)} fresh story clusters (excluded {len(used_article_ids)} previously produced articles). "
                 f"Top story: '{top['top_headline'][:60]}...' "
                 f"(score: {top['total_score']}, viral: {top['scores']['viral_potential']})"
             )
         else:
-            logger.info("No stories to rank")
+            logger.info("No fresh unproduced stories to rank")
 
         return scored_clusters

@@ -200,7 +200,7 @@ class SEOOptimizer:
         pinned_comment = await self._generate_pinned_comment(topic, seo_title)
 
         # Ensure clean, mobile-safe #Shorts title without mid-word truncation
-        clean_title = format_shorts_title(seo_title, max_base_len=42)
+        clean_title = format_shorts_title(seo_title, max_base_len=68)
 
         result = {
             "title": clean_title,  # YouTube 100 char limit (mobile sweet spot 35-48 chars)
@@ -504,19 +504,55 @@ def _truncate_at_word_boundary(text: str, max_len: int) -> str:
     return truncated.rstrip(",.-:;?! ")
 
 
-def format_shorts_title(raw_title: str, max_base_len: int = 42) -> str:
-    """Format an ultra-clean YouTube Shorts title that fits on mobile screens without truncation.
+# Policy word replacements to prevent YouTube safety/violence shadowbanning
+POLICY_REPLACEMENTS = [
+    (re.compile(r"\bincitement to murder\b", re.IGNORECASE), "taking it way too far"),
+    (re.compile(r"\bmurdered\b", re.IGNORECASE), "destroyed"),
+    (re.compile(r"\bmurder\b", re.IGNORECASE), "ruined"),
+    (re.compile(r"\bkilling\b", re.IGNORECASE), "breaking"),
+    (re.compile(r"\bkilled\b", re.IGNORECASE), "ended"),
+    (re.compile(r"\bhumping\b", re.IGNORECASE), "jumping on"),
+    (re.compile(r"\bsuicide\b", re.IGNORECASE), "disaster"),
+    (re.compile(r"\bterrorist\b", re.IGNORECASE), "criminal"),
+]
+
+
+def _sanitize_policy_words(text: str) -> str:
+    """Replace sensitive policy-violating words with advertiser-friendly comedy words."""
+    if not text:
+        return text
+    sanitized = text
+    for pattern, replacement in POLICY_REPLACEMENTS:
+        sanitized = pattern.sub(replacement, sanitized)
+    return sanitized
+
+
+def format_shorts_title(raw_title: str, max_base_len: int = 70) -> str:
+    """Format an ultra-clean YouTube Shorts title that fits on screens without awkward truncation.
     
-    YouTube Shorts mobile UI truncates titles around 45-50 characters with ellipsis.
-    This ensures clean word-boundary truncation and appends '#Shorts'.
+    Ensures:
+    - Sensitive/policy-flagged words are sanitized
+    - Never abruptly cuts off mid-sentence or on trailing prepositions/conjunctions
+    - Appends '#Shorts'
     """
     clean = _sanitize_seo_title(raw_title)
+    clean = _sanitize_policy_words(clean)
     # Strip any existing #shorts tag (case-insensitive)
     clean_no_tag = re.sub(r'#shorts\b', '', clean, flags=re.IGNORECASE).strip()
     clean_no_tag = clean_no_tag.rstrip(",.-:;?! ")
     
-    # Truncate base title at word boundary
-    safe_base = _truncate_at_word_boundary(clean_no_tag, max_base_len)
+    if len(clean_no_tag) <= max_base_len:
+        safe_base = clean_no_tag
+    else:
+        safe_base = _truncate_at_word_boundary(clean_no_tag, max_base_len)
+
+    # Avoid ending on incomplete filler words (e.g. 'is', 'and', 'the', 'if', 'wa', 'in', 'of')
+    bad_endings = {"is", "and", "or", "the", "a", "an", "if", "to", "for", "in", "on", "at", "by", "with", "that", "this", "wa", "of"}
+    words = safe_base.split()
+    while words and words[-1].lower() in bad_endings:
+        words.pop()
+    safe_base = " ".join(words) if words else clean_no_tag[:max_base_len]
+
     return f"{safe_base} #Shorts"
 
 
@@ -691,7 +727,8 @@ def _sanitize_seo_title(raw_title: str) -> str:
     """
     try:
         from app.services.scriptwriter.writer import sanitize_title
-        return sanitize_title(raw_title)
+        clean = sanitize_title(raw_title)
+        return _sanitize_policy_words(clean)
     except ImportError:
         pass
 
