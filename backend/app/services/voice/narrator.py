@@ -145,11 +145,12 @@ class VoiceNarrator:
             file_name = f"narration_edge_{uuid.uuid4().hex}.mp3"
             file_path = self.output_dir / file_name
 
-            # Premium female news anchor voice (Jenny Neural)
-            voice = getattr(settings, "edge_tts_voice", "en-US-JennyNeural") or "en-US-JennyNeural"
+            # Expressive narrator voice (Christopher for comedy) with energetic Shorts pacing (+12%)
+            voice = getattr(settings, "edge_tts_voice", "en-US-ChristopherNeural") or "en-US-ChristopherNeural"
+            rate = getattr(settings, "edge_tts_rate", "+12%")
 
             async def _run_edge():
-                communicate = edge_tts.Communicate(text, voice)
+                communicate = edge_tts.Communicate(text, voice, rate=rate)
                 await communicate.save(str(file_path))
 
             # Run in event loop or thread

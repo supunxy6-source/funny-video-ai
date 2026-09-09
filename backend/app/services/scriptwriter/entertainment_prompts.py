@@ -84,7 +84,7 @@ STRUCTURE (Output as JSON):
             "text": "Instant mid-action hook. MAX 7-10 words (2-3 seconds). No filler. (e.g. '...nobody warned him what happens when you step here.')",
             "visual_prompt": "Cinematic vertical 9:16 shot, sudden zoom into shocked face or dramatic funny moment, vibrant high contrast, rapid motion",
             "visual_type": "video",
-            "text_overlay": "Wait for it... 💀"
+            "text_overlay": "Story-specific premise hook under 6 words (e.g. 'He was NOT ready 💀', 'Bro thought he was slick 😭'). BANNED: 'Wait for it...'"
         }},
         {{
             "order": 2,
@@ -136,7 +136,7 @@ STRUCTURE (Must be strictly 4 scenes output as JSON):
             "text": "Immediate conflict or disbelief hook that STOPS the scroll. Max 10-12 words, 2-3 seconds. No filler.",
             "visual_prompt": "Cinematic vertical video of an expressive face in disbelief or funny situation, 9:16 vertical, high quality",
             "visual_type": "video",
-            "text_overlay": "Wait for it... 💀"
+            "text_overlay": "Story-specific premise hook under 6 words (e.g. 'He had 5 seconds to fix this 😭', 'Do NOT do this in public 💀'). BANNED: 'Wait for it...'"
         }},
         {{
             "order": 2,

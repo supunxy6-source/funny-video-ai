@@ -26,8 +26,8 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries 10 --upgrade pip 
 # Copy source
 COPY . .
 
-# Create media directories (seeds fresh Docker volumes)
-RUN mkdir -p /app/media/generated /app/media/temp /app/media/thumbnails
+# Create base media directory (runtime subdirectories are created by entrypoint.sh)
+RUN mkdir -p /app/media
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
@@ -63,8 +63,8 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries 10 --upgrade pip 
 
 COPY . .
 
-# Create media directories (seeds fresh Docker volumes) and set ownership
-RUN mkdir -p /app/media/generated /app/media/temp /app/media/thumbnails && \
+# Create base media directory (runtime subdirectories are created by entrypoint.sh) and set ownership
+RUN mkdir -p /app/media && \
     chown -R appuser:appuser /app
 
 # Copy entrypoint script
