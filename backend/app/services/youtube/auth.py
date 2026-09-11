@@ -66,12 +66,14 @@ def get_youtube_credentials() -> Credentials:
             logger.warning(f"Failed to load token file ({token_path}): {e}")
 
     # Refresh if expired
+    refresh_error = None
     if creds and (creds.expired or not creds.valid) and creds.refresh_token:
         try:
             creds.refresh(Request())
             logger.info("🔄 YouTube credentials refreshed successfully")
             _save_token(creds, token_path)
         except Exception as e:
+            refresh_error = e
             logger.warning(f"Token refresh failed: {e}")
 
     if not creds or not creds.valid:
@@ -86,20 +88,38 @@ def get_youtube_credentials() -> Credentials:
                 f"YouTube client secrets not found at {client_secrets_path}."
             )
 
-        raise RuntimeError("YouTube OAuth token expired or invalid.")
+        error_details = f": {refresh_error}" if refresh_error else "."
+        raise RuntimeError(
+            f"YouTube OAuth token expired or invalid{error_details} "
+            "Please run 'python scripts/auth_youtube.py --login' to re-authenticate, "
+            "and update your GitHub Actions Secret 'YOUTUBE_TOKEN'."
+        )
 
     return creds
 
 
 def _save_token(creds: Credentials, token_path: Path) -> None:
-    """Save credentials to a token file with error handling."""
-    try:
-        token_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(token_path, "w", encoding="utf-8") as f:
-            f.write(creds.to_json())
-        logger.info(f"💾 YouTube token saved to {token_path}")
-    except Exception as e:
-        logger.warning(f"Could not persist updated token to disk ({token_path}): {e}")
+    """Save credentials to token file(s) with error handling."""
+    candidates = [
+        token_path,
+        Path("config/youtube_token.json"),
+        Path("backend/config/youtube_token.json"),
+        Path(__file__).resolve().parent.parent.parent.parent / "config" / "youtube_token.json",
+        Path(__file__).resolve().parent.parent.parent / "config" / "youtube_token.json",
+    ]
+    seen = set()
+    for path in candidates:
+        try:
+            resolved = path.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            with open(resolved, "w", encoding="utf-8") as f:
+                f.write(creds.to_json())
+            logger.info(f"💾 YouTube token saved to {resolved}")
+        except Exception as e:
+            logger.warning(f"Could not persist updated token to disk ({path}): {e}")
 
 
 def is_authenticated() -> bool:
