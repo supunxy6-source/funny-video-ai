@@ -24,6 +24,7 @@ from typing import Optional
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from app.core.config import settings
 from app.services.youtube.auth import get_youtube_credentials
 
 logger = logging.getLogger(__name__)
@@ -485,7 +486,7 @@ def _extract_from_json_text(text: str, field_type: str) -> str:
         if mode == "entertainment":
             return (
                 f"Daily comedy & viral memes for {today}. 😂\n\n"
-                f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@StatesideSmiles?sub_confirmation=1\n\n"
+                f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@Smiles-x4g?sub_confirmation=1\n\n"
                 f"#Shorts #Funny #Memes #Comedy #StatesideSmiles"
             )
         return f"AI-generated news briefing for {today}. Subscribe for daily updates."

@@ -209,19 +209,18 @@ TIER 3 — Long-tail SEO Breadth (generate 9):
 
 Respond with a JSON array of 25 strings: ["shorts", "youtubeshorts", "specific trending tag", ...]"""
 
-THUMBNAIL_PROMPT_TEMPLATE = """Create a VIRAL YouTube Shorts thumbnail/cover image (9:16 aspect ratio) about: {topic}
+THUMBNAIL_PROMPT_TEMPLATE = """Create a VIRAL YouTube Shorts comedy thumbnail/cover image (9:16 vertical) about: {topic}
 
-Style: Maximum visual impact for mobile screens with:
-- A single dramatic focal subject taking up 60%+ of the frame
-- Extreme close-up or dramatic wide shot (nothing in between)
-- Hyper-saturated, high-contrast colors (reds, oranges, electric blues)
-- Cinematic dramatic lighting with strong directional shadows
+Style: Maximum comedic visual impact for mobile scroll feeds:
+- Single hilarious focal subject taking up 60%+ of the frame
+- Exaggerated, priceless facial expression or funny disbelief (jaw drop, crying laughing, comical facepalm)
+- Bright, punchy, hyper-saturated colors (vibrant yellows, hot pinks, electric blues, neon accents)
+- Crisp studio lighting with bright key light, NO dark gloomy shadows
 - Vertical 9:16 aspect ratio (1080x1920)
-- Photorealistic editorial quality
-- Strong emotional expression if showing a person (shock, anger, determination)
-- No text (text will be overlaid separately)
-- Dark vignette edges to draw eye to center
-- Slight motion blur to imply action/urgency"""
+- Clean, photorealistic or expressive high-detail 3D/cinematic comedy style
+- Clear, immediate comedic premise that sparks instant curiosity
+- No text (text and badges will be overlaid separately)
+- High contrast subject separation so it pops on a phone screen"""
 
 FACT_CHECK_PROMPT = """Review this YouTube Shorts news script for factual accuracy.
 

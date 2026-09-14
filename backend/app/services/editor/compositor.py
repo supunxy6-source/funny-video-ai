@@ -45,6 +45,7 @@ from app.services.editor.assets import (
     FONT_SIZES,
     INTRO_DURATION,
     OUTRO_DURATION,
+    SUBSCRIBE_OVERLAY_CONFIG,
     TEXT_OVERLAY_CONFIG,
     TRANSITIONS,
     VIDEO_CONFIG,
@@ -359,6 +360,75 @@ class VideoCompositor:
             .with_duration(min(show_duration, scene_duration - start_time))
         )
 
+    def _create_subscribe_overlay(self, total_duration: float) -> Optional[ImageClip]:
+        """Create a subscribe CTA banner for the last 2.5 seconds of the video.
+
+        Purely visual — does not affect audio loop. Plants the subscribe seed
+        without wasting content time. Appears as a pill-shaped banner near the
+        bottom of the screen.
+        """
+        from PIL import Image, ImageDraw
+
+        config = SUBSCRIBE_OVERLAY_CONFIG
+        cta_text = config.get("text", "😂 Subscribe to Stateside Smiles!")
+        cta_duration = config.get("duration", 2.5)
+
+        if total_duration < cta_duration + 1.0:
+            return None  # Video too short for CTA
+
+        font = self._get_font(config.get("font_size", 38), bold=True)
+        pad_x = config.get("padding_x", 40)
+        pad_y = config.get("padding_y", 14)
+
+        # Measure text
+        dummy_img = Image.new("RGBA", (1, 1))
+        dummy_draw = ImageDraw.Draw(dummy_img)
+        try:
+            bbox = dummy_draw.textbbox((0, 0), cta_text, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+        except Exception:
+            text_w, text_h = 500, 40
+
+        overlay_w = text_w + pad_x * 2
+        overlay_h = text_h + pad_y * 2
+        overlay_w = min(overlay_w, self.width - 60)
+
+        overlay_img = Image.new("RGBA", (overlay_w, overlay_h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay_img)
+
+        # Parse bg color
+        bg_hex = config.get("bg_color", "#EC4899DD")
+        bg_rgb = self._hex_to_rgb(bg_hex[:7])
+        bg_alpha = int(bg_hex[7:9], 16) if len(bg_hex) > 7 else 220
+
+        border_radius = config.get("border_radius", 20)
+        draw.rounded_rectangle(
+            [(0, 0), (overlay_w, overlay_h)],
+            radius=border_radius,
+            fill=(*bg_rgb, bg_alpha),
+        )
+        draw.text(
+            (overlay_w // 2, overlay_h // 2),
+            cta_text,
+            font=font,
+            fill=(255, 255, 255, 255),
+            anchor="mm",
+        )
+
+        overlay_path = self.temp_dir / f"subscribe_cta_{uuid.uuid4().hex}.png"
+        overlay_img.save(str(overlay_path), "PNG")
+
+        pos_y = self.height - config.get("position_y_offset", 200)
+        start_time = total_duration - cta_duration
+
+        return (
+            ImageClip(str(overlay_path))
+            .with_position(("center", pos_y))
+            .with_start(start_time)
+            .with_duration(cta_duration)
+        )
+
     def _create_scene_fallback_card(self, title: str, duration: float) -> ImageClip:
         """Create a high-contrast editorial news graphic card for vertical 9:16 screen when no image is available."""
         from PIL import Image, ImageDraw
@@ -539,6 +609,37 @@ async def compose_video(script_id: int) -> int:
 
         # Render — no intro/outro padding, every second is content
         video_path = compositor.render_video(clips, f"news_{script_id}")
+
+        # Add subscribe CTA overlay to the final video
+        # This composites a small subscribe banner onto the last 2.5 seconds
+        try:
+            from moviepy import VideoFileClip as _VFC, CompositeVideoClip as _CVC
+            base_vid = _VFC(video_path)
+            sub_overlay = compositor._create_subscribe_overlay(base_vid.duration)
+            if sub_overlay:
+                cta_path = str(Path(video_path).with_suffix('')) + "_cta.mp4"
+                final_with_cta = _CVC([base_vid, sub_overlay], size=(compositor.width, compositor.height))
+                final_with_cta.write_videofile(
+                    cta_path,
+                    fps=compositor.fps,
+                    codec=VIDEO_CONFIG["codec"],
+                    audio_codec=VIDEO_CONFIG["audio_codec"],
+                    audio_bitrate=VIDEO_CONFIG["audio_bitrate"],
+                    bitrate=VIDEO_CONFIG["video_bitrate"],
+                    preset=VIDEO_CONFIG["preset"],
+                    threads=4,
+                    logger=None,
+                )
+                final_with_cta.close()
+                base_vid.close()
+                # Replace original with CTA version
+                import shutil
+                shutil.move(cta_path, video_path)
+                logger.info("😂 Subscribe CTA overlay added to final video")
+            else:
+                base_vid.close()
+        except Exception as e:
+            logger.warning(f"Subscribe CTA overlay skipped: {e}")
 
         # Generate subtitles from the full audio (kept as separate SRT for platforms that use it)
         subtitle_path = None

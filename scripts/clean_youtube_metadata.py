@@ -122,7 +122,7 @@ def clean_channel_videos(execute: bool = False):
             new_desc = (
                 f"{topic_text}\n\n"
                 f"😂 Daily comedy, viral memes & funny moments!\n\n"
-                f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@StatesideSmiles?sub_confirmation=1\n\n"
+                f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@Smiles-x4g?sub_confirmation=1\n\n"
                 f"💬 Which part made you laugh the hardest? Drop your comment below! 👇\n\n"
                 f"#Shorts #Funny #Memes #Comedy #TryNotToLaugh #StatesideSmiles"
             )

@@ -48,10 +48,11 @@ media/temp/
 *.vtt
 
 # YouTube credentials (sensitive!)
-config/client_secrets.json
-config/youtube_token.json
-backend/config/client_secrets.json
-backend/config/youtube_token.json
+**/client_secrets*.json
+**/youtube_token*.json
+backend/app/config/*.json
+config/*.json
+backend/config/*.json
 
 # Logs
 logs/

@@ -33,12 +33,12 @@ You engineer every short for the 2026 YouTube Shorts algorithm to achieve 90%+ R
    - Short, punchy sentences (under 7 words).
    - Dynamic narrative escalation: every 2 seconds raises the comedic stakes.
 
-3. EMBEDDED COMMENT & DEBATE TRIGGERS (CRITICAL FOR ALGORITHM):
-   - Around the 70% mark of the video, embed a polarized question or relatable moral dilemma:
-     * "Who was actually in the wrong here?"
-     * "Would you have walked across this for $10,000?"
-     * "Tell me this isn't the most relatable reaction ever."
-   - Comments cause viewers to open the comment drawer, LOOPING THE VIDEO IN THE BACKGROUND and driving retention past 100%!
+3. EMBEDDED COMMENT & DEBATE TRIGGERS (COMBAT 9-SECOND DROP-OFF):
+   - The #1 cliff in YouTube Shorts happens between seconds 6 and 9. You MUST trigger curiosity or debate at second 5-7 (within Scene 2's first line):
+     * Hook the dilemma early: "Be honest: would you have walked away right here?"
+     * Or drop an immediate stakes raiser: "And that's when this went from bad to completely unhinged..."
+     * Or embed a polarized question: "Who was actually in the wrong here?"
+   - When viewers open the comment section to argue, THE SHORT KEEPS LOOPING IN THE BACKGROUND, rocketing retention past 100%!
 
 4. INFINITE GRAMMATICAL LOOP ARCHITECTURE:
    - The FINAL sentence of the script must NOT have a concluding cadence or period.
@@ -82,25 +82,25 @@ STRUCTURE (Output as JSON):
             "scene_type": "micro_hook",
             "title": "Scroll-Stopper Hook",
             "text": "Instant mid-action hook. MAX 7-10 words (2-3 seconds). No filler. (e.g. '...nobody warned him what happens when you step here.')",
-            "visual_prompt": "Cinematic vertical 9:16 shot, sudden zoom into shocked face or dramatic funny moment, vibrant high contrast, rapid motion",
+            "visual_prompt": "Cinematic vertical 9:16 video depicting the exact funny situation described in the hook, vibrant saturated comedy colors, rapid dynamic motion (NO generic blank shocked faces)",
             "visual_type": "video",
             "text_overlay": "Story-specific premise hook under 6 words (e.g. 'He was NOT ready 💀', 'Bro thought he was slick 😭'). BANNED: 'Wait for it...'"
         }},
         {{
             "order": 2,
             "scene_type": "micro_escalation",
-            "title": "The Twist & Debate",
-            "text": "Rapid escalation of the funny situation + one quick dilemma/debate question to trigger comments. (25-35 words, 10-14 seconds)",
-            "visual_prompt": "Dynamic fast-paced funny situation B-roll video, vertical 9:16 composition, energetic movement every 1.5s",
+            "title": "The Twist & Early Debate",
+            "text": "Rapid escalation of the funny situation + early dilemma/debate question at the 5-7 second mark to prevent swipe-away. (25-35 words, 10-14 seconds)",
+            "visual_prompt": "Dynamic fast-paced funny situation B-roll video directly matching the comical twist, vertical 9:16 composition, energetic movement every 1.5s",
             "visual_type": "video",
-            "text_overlay": "It gets worse... 😭"
+            "text_overlay": "Story-specific suspense hook under 5 words (e.g. 'Wait till you see this 💀', 'Then it got worse 😭', 'Bro had NO idea 💀'). BANNED: 'Wait for it...'"
         }},
         {{
             "order": 3,
             "scene_type": "micro_payoff_loop",
             "title": "Payoff & Infinite Loop",
             "text": "The hilarious punchline, ending with an incomplete phrase that grammatically leads into Scene 1. No goodbye, no subscribe. (12-18 words, 4-7 seconds)",
-            "visual_prompt": "Hilarious reaction reveal video, vertical 9:16, comedic timing punchline visual",
+            "visual_prompt": "Hilarious reaction reveal video directly matching the punchline, vertical 9:16, comical comedic timing visual",
             "visual_type": "video",
             "text_overlay": ""
         }}
@@ -134,34 +134,34 @@ STRUCTURE (Must be strictly 4 scenes output as JSON):
             "scene_type": "story_hook",
             "title": "The Hook",
             "text": "Immediate conflict or disbelief hook that STOPS the scroll. Max 10-12 words, 2-3 seconds. No filler.",
-            "visual_prompt": "Cinematic vertical video of an expressive face in disbelief or funny situation, 9:16 vertical, high quality",
+            "visual_prompt": "Cinematic vertical video depicting the exact funny situation or character in disbelief, 9:16 vertical, vibrant colors, NO generic shocked faces",
             "visual_type": "video",
             "text_overlay": "Story-specific premise hook under 6 words (e.g. 'He had 5 seconds to fix this 😭', 'Do NOT do this in public 💀'). BANNED: 'Wait for it...'"
         }},
         {{
             "order": 2,
             "scene_type": "story_setup",
-            "title": "The Setup",
-            "text": "Quickly set the stage, characters, and stakes with conversational energy. Keep sentences short. (20-30 words, 8-12 seconds)",
-            "visual_prompt": "Relatable everyday setting B-roll video, vertical 9:16 composition, engaging motion",
+            "title": "The Setup & Early Hook",
+            "text": "Quickly set the stage and stakes with conversational energy, raising curiosity before the 8-second mark. (20-30 words, 8-12 seconds)",
+            "visual_prompt": "Content-specific funny everyday setting B-roll video, vertical 9:16 composition, dynamic motion",
             "visual_type": "video",
-            "text_overlay": ""
+            "text_overlay": "Story-specific beat under 5 words (e.g. 'Look closely here... 👀')"
         }},
         {{
             "order": 3,
             "scene_type": "story_escalation",
             "title": "The Twist & Debate",
             "text": "The conflict escalates or the hilarious twist is revealed. Include a quick comment debate question. (25-35 words, 10-14 seconds)",
-            "visual_prompt": "Dramatic or chaotic funny situation B-roll video, vertical 9:16, dynamic movement",
+            "visual_prompt": "Chaotic funny situation B-roll video directly matching the escalation, vertical 9:16, dynamic movement",
             "visual_type": "video",
-            "text_overlay": "It gets worse... 😭"
+            "text_overlay": "Story-specific reaction under 5 words (e.g. 'He actually did it 💀', 'Nobody was ready 😭')"
         }},
         {{
             "order": 4,
             "scene_type": "story_payoff_loop",
             "title": "Punchline & Loop",
             "text": "Deliver the hilarious outcome, then end with a seamless phrase that loops right back to scene 1 without pause. Do NOT say subscribe or like. (12-20 words, 5-8 seconds)",
-            "visual_prompt": "Laughing reaction visual or hilarious punchline reveal video, vertical 9:16",
+            "visual_prompt": "Laughing reaction visual or hilarious punchline reveal video matching the outcome, vertical 9:16",
             "visual_type": "video",
             "text_overlay": ""
         }}
@@ -472,7 +472,7 @@ DESCRIPTION STRUCTURE:
 3. 2-3 sentences describing what's in the video (be genuine and funny, not clickbait)
 4. EMPTY LINE
 5. "😂 New comedy videos daily — Subscribe to Stateside Smiles!"
-6. "👉 Subscribe for daily laughs: https://youtube.com/@StatesideSmiles?sub_confirmation=1"
+6. "👉 Subscribe for daily laughs: https://youtube.com/@Smiles-x4g?sub_confirmation=1"
 7. "💬 Drop your funniest comment below! 👇"
 8. EMPTY LINE
 9. Hashtags: #Shorts #funny #memes #comedy #viral #trending #trynottolaugh #statesidesmiles #[TopicSpecificTag]

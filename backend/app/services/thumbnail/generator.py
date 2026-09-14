@@ -35,11 +35,11 @@ THUMB_WIDTH = 1080
 THUMB_HEIGHT = 1920
 NUM_VARIANTS = 3
 
-# Badge styles for different urgency levels
+# Badge styles — comedy-focused for entertainment channel
 BADGE_STYLES = [
-    {"text": "🔴 BREAKING", "bg": (220, 38, 38), "border": (255, 70, 70)},
-    {"text": "⚡ ALERT", "bg": (234, 88, 12), "border": (255, 130, 50)},
-    {"text": "🚨 URGENT", "bg": (185, 28, 28), "border": (220, 50, 50)},
+    {"text": "😂 SO FUNNY", "bg": (236, 72, 153), "border": (244, 114, 182)},     # Hot pink
+    {"text": "💀 I'M DONE", "bg": (124, 58, 237), "border": (167, 139, 250)},      # Purple
+    {"text": "🤣 NO WAY", "bg": (245, 158, 11), "border": (251, 191, 36)},         # Amber
 ]
 
 
@@ -58,11 +58,10 @@ class ThumbnailGenerator:
         variants = []
 
         for i in range(num_variants):
-            # Vary the prompt slightly for diversity
             prompt_suffix = [
-                "Extreme close-up dramatic composition with hyper-saturated colors",
-                "Wide-angle establishing shot with dramatic volumetric lighting",
-                "Emotional close-up of affected person with cinematic shallow DOF",
+                "Hilarious expressive close-up with vivid vibrant colors and comical disbelief",
+                "Wide-angle chaotic funny scene with clear comedic action and high contrast",
+                "Priceless funny reaction with exaggerated facial expression and bright punchy lighting",
             ]
             prompt = THUMBNAIL_PROMPT_TEMPLATE.format(topic=topic)
             if i < len(prompt_suffix):
@@ -179,7 +178,7 @@ class ThumbnailGenerator:
                 )
 
             # === MAIN TITLE TEXT (large, bold, with heavy stroke) ===
-            clean_title = title.strip() or "Breaking News"
+            clean_title = title.strip() or "Funniest Thing Today"
             # Remove #Shorts from thumbnail text (visual noise)
             clean_title = clean_title.replace("#Shorts", "").replace("#shorts", "").strip()
             
@@ -206,7 +205,7 @@ class ThumbnailGenerator:
             )
             draw.text(
                 (THUMB_WIDTH // 2, bar_y + 10),
-                "👆 SWIPE UP • 60 SECOND NEWS",
+                "😂 STATESIDE SMILES • DAILY LAUGHS",
                 font=font_small, fill=(255, 255, 255, 220), anchor="mt"
             )
 
@@ -241,17 +240,17 @@ class ThumbnailGenerator:
         elif title_len > 70:
             score -= 0.10
 
-        # Reward high-impact power words (tiered)
+        # Reward high-impact comedy power words (tiered)
         high_impact = [
-            "shocking", "exposed", "breaking", "warning", "urgent",
-            "banned", "insane", "massive", "emergency", "critical",
+            "funniest", "hilarious", "insane", "epic", "unbelievable",
+            "craziest", "wildest", "legendary", "impossible", "cursed",
         ]
         medium_impact = [
-            "secret", "hidden", "revealed", "caught", "leaked",
-            "discovered", "confirmed", "terrifying", "incredible",
+            "fail", "wholesome", "relatable", "accurate", "caught",
+            "exposed", "real", "valid", "goated", "incredible",
         ]
         low_impact = [
-            "alert", "update", "live", "new", "first", "latest", "major",
+            "viral", "trending", "new", "memes", "funny", "comedy", "latest",
         ]
         
         if any(word in title_lower for word in high_impact):
@@ -274,14 +273,14 @@ class ThumbnailGenerator:
         if "?" in title:
             score += 0.08
 
-        # Badge style impact
+        # Badge style impact (comedy badges)
         if badge_style:
-            if "BREAKING" in badge_style.get("text", ""):
-                score += 0.08  # Red BREAKING badge is highest CTR
-            elif "ALERT" in badge_style.get("text", ""):
-                score += 0.06
+            if "SO FUNNY" in badge_style.get("text", ""):
+                score += 0.08  # Hot pink comedy badge is highest CTR
+            elif "I'M DONE" in badge_style.get("text", ""):
+                score += 0.07
             else:
-                score += 0.04
+                score += 0.05
 
         # Penalty for generic/boring words
         boring_words = ["daily", "briefing", "report", "summary", "weekly"]

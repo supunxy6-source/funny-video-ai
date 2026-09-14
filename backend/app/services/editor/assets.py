@@ -161,6 +161,20 @@ MEME_OVERLAY_CONFIG = {
     "bottom_margin": 50,
 }
 
+# ── Subscribe CTA Overlay (Last 2 seconds of video) ───
+SUBSCRIBE_OVERLAY_CONFIG = {
+    "text": "😂 Subscribe to Stateside Smiles!",
+    "font_size": 38,
+    "font_color": "#FFFFFF",
+    "bg_color": "#EC4899DD",       # Hot pink, semi-transparent
+    "border_radius": 20,
+    "position_y_offset": 200,      # From bottom
+    "padding_x": 40,
+    "padding_y": 14,
+    "duration": 2.5,               # Show for last 2.5 seconds
+    "fade_in": 0.25,
+}
+
 # ── Intro/Outro (REMOVED — every second is content) ───
 INTRO_DURATION = 0.0
 OUTRO_DURATION = 0.0

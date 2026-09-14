@@ -333,7 +333,7 @@ class SEOOptimizer:
                     f"{clean_title}\n\n"
                     f"{topic}\n\n"
                     f"😂 Daily comedy, viral memes & funny stories!\n\n"
-                    f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@StatesideSmiles?sub_confirmation=1\n\n"
+                    f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@Smiles-x4g?sub_confirmation=1\n\n"
                     f"💬 Which part made you laugh the hardest? Drop your comment below! 👇\n\n"
                     f"#Shorts #Funny #Memes #Comedy #TryNotToLaugh #StatesideSmiles"
                 )
@@ -445,7 +445,7 @@ class SEOOptimizer:
                     f"🔥 {debate_q}\n\n"
                     f"💬 Drop your honest thoughts below — best reply gets pinned! 📌\n"
                     f"❤️ LIKE if this made you smile\n"
-                    f"🔔 Subscribe to Stateside Smiles for daily laughs!"
+                    f"🔔 Subscribe for daily laughs: https://youtube.com/@Smiles-x4g?sub_confirmation=1"
                 )
         except Exception as e:
             logger.debug(f"LLM pinned comment generation fallback: {e}")
@@ -475,7 +475,7 @@ class SEOOptimizer:
                 f"🔥 {debate_hook}\n\n"
                 f"💬 Drop your comment below — best one gets pinned! 📌\n"
                 f"❤️ LIKE if this made your day better\n"
-                f"🔔 Subscribe to Stateside Smiles for daily viral laughs!"
+                f"🔔 Subscribe for daily laughs: https://youtube.com/@Smiles-x4g?sub_confirmation=1"
             )
         else:
             news_debates = [
