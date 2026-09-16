@@ -264,7 +264,7 @@ class SettingsResponse(BaseModel):
     daily_video_count: int = 3
     pipeline_schedule_hour: int
     pipeline_schedule_minute: int
-    pipeline_schedule_hours: str = "8,12,16,20"
+    pipeline_schedule_hours: str = "16"
     pipeline_timezone: str
     news_discovery_interval_minutes: int
     elevenlabs_voice_id: str

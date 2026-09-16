@@ -13,7 +13,7 @@ import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_factory
@@ -103,6 +103,7 @@ async def run_clustering() -> dict[int, list[int]]:
     """
     Main clustering entry point called by Celery task.
     Fetches unclustered articles, clusters them, and updates cluster_ids in DB.
+    Guarantees unique cluster IDs across runs.
     """
     clusterer = StoryClusterer()
 
@@ -126,17 +127,26 @@ async def run_clustering() -> dict[int, list[int]]:
         ]
 
         # Run clustering
-        clusters = clusterer.cluster_articles(article_dicts)
+        raw_clusters = clusterer.cluster_articles(article_dicts)
 
-        # Update cluster_ids in database
-        for cluster_id, article_ids in clusters.items():
+        # Get the current maximum cluster_id to avoid ID collision
+        max_cluster_res = await db.execute(
+            select(func.max(NewsArticle.cluster_id))
+        )
+        base_cluster_id = (max_cluster_res.scalar() or 0) + 1
+
+        # Update cluster_ids in database with unique offset
+        offset_clusters: dict[int, list[int]] = {}
+        for local_id, article_ids in raw_clusters.items():
+            assigned_id = base_cluster_id + local_id
+            offset_clusters[assigned_id] = article_ids
             await db.execute(
                 update(NewsArticle)
                 .where(NewsArticle.id.in_(article_ids))
-                .values(cluster_id=cluster_id)
+                .values(cluster_id=assigned_id)
             )
 
         await db.commit()
-        logger.info(f"💾 Updated cluster assignments for {len(articles)} articles")
+        logger.info(f"💾 Updated cluster assignments for {len(articles)} articles (cluster IDs {base_cluster_id} to {base_cluster_id + len(raw_clusters) - 1})")
 
-        return clusters
+        return offset_clusters

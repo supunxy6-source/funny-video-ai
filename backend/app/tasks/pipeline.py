@@ -627,7 +627,7 @@ def run_batch_pipeline(video_count: int = None, pipeline_run_id: str = None):
     """
     from app.core.config import settings
     count = video_count or getattr(settings, "daily_video_count", 3)
-    count = max(1, min(int(count), 5))  # Clamp between 1 and 5 videos
+    count = max(1, min(int(count), 3))  # Strictly clamp to 3 videos maximum per run
 
     pipeline_run_id = pipeline_run_id or f"batch_{uuid.uuid4().hex[:10]}"
     logger.info(f"🚀 Starting batch pipeline ({count} videos target): {pipeline_run_id}")
@@ -717,9 +717,10 @@ def run_full_pipeline(video_count: int = None, pipeline_run_id: str = None):
     """
     from app.core.config import settings
     target_count = video_count or getattr(settings, "daily_video_count", 3)
+    target_count = max(1, min(int(target_count), 3))
 
     if target_count > 1:
-        # Run batch pipeline for 3 to 5 videos
+        # Run batch pipeline for up to 3 videos
         pipeline_run_id = pipeline_run_id or f"batch_{uuid.uuid4().hex[:10]}"
         run_batch_pipeline.delay(video_count=target_count, pipeline_run_id=pipeline_run_id)
         return pipeline_run_id

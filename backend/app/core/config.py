@@ -121,11 +121,11 @@ class Settings(BaseSettings):
     whisper_device: str = "cpu"
 
     # ── Scheduling & Production Target ────────────────
-    daily_video_count: int = 3  # Target videos per day (3 to 5)
-    stagger_uploads_hours: int = 1  # Hours between scheduled uploads
-    pipeline_schedule_hour: int = 8
+    daily_video_count: int = 3  # Target videos per day (capped strictly to 3)
+    stagger_uploads_hours: int = 3  # Hours between scheduled uploads (3h apart across peak hours)
+    pipeline_schedule_hour: int = 16
     pipeline_schedule_minute: int = 0
-    pipeline_schedule_hours: str = "8,12,16,20"  # Comma-separated hours for daily multi-slot schedule
+    pipeline_schedule_hours: str = "16"  # Single daily batch run producing the 3 videos
     pipeline_timezone: str = "UTC"
     content_discovery_interval_minutes: int = 120
 

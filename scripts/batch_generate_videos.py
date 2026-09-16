@@ -61,8 +61,8 @@ async def run_batch(count: int = 3, publish: bool = True):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Batch generate 3 to 5 news videos and publish to YouTube")
-    parser.add_argument("--count", type=int, default=3, choices=[1, 2, 3, 4, 5], help="Number of videos to produce (1-5)")
+    parser = argparse.ArgumentParser(description="Batch generate 1 to 3 comedy videos and publish to YouTube")
+    parser.add_argument("--count", type=int, default=3, choices=[1, 2, 3], help="Number of videos to produce (1-3)")
     parser.add_argument("--no-publish", action="store_true", help="Disable automatic YouTube publishing")
 
     args = parser.parse_args()

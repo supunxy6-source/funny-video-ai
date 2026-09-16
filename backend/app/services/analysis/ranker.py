@@ -54,9 +54,9 @@ CATEGORY_IMPORTANCE = {
 
 # Strict safety filter: content containing these words will be rejected to protect channel reputation
 BANNED_POLICY_KEYWORDS = [
-    "murder", "killing", "killed", "humping", "suicide", "terrorist", "terrorism",
-    "rape", "assault", "execution", "pedophile", "porn", "nude", "nsfw",
-    "incitement to murder", "beheaded", "massacre",
+    "murder", "killing", "killed", "humping", "suicide", "suicidal", "terrorist", "terrorism",
+    "rape", "raping", "rapist", "assault", "execution", "pedophile", "pedophilia", "porn", "nude", "nsfw",
+    "incitement to murder", "beheaded", "massacre", "genocide", "torture", "slur", "dildo", "masturbat",
 ]
 
 # Keywords that indicate viral potential on YouTube Shorts (separated by mode)
@@ -261,10 +261,11 @@ async def rank_stories() -> list[dict]:
     ranker = StoryRanker()
 
     async with async_session_factory() as db:
-        # Step A: Collect all article IDs already used in generated scripts
-        script_res = await db.execute(select(Script.article_ids))
+        # Step A: Collect all article IDs and titles already used in generated scripts
+        script_res = await db.execute(select(Script.article_ids, Script.title, Script.topic_summary))
         used_article_ids = set()
-        for (aid_json,) in script_res.all():
+        used_titles = set()
+        for aid_json, title, topic_summary in script_res.all():
             if aid_json:
                 try:
                     loaded = json.loads(aid_json)
@@ -274,6 +275,10 @@ async def rank_stories() -> list[dict]:
                         used_article_ids.add(loaded)
                 except Exception:
                     pass
+            if title:
+                used_titles.add(title.strip().lower())
+            if topic_summary:
+                used_titles.add(topic_summary.strip().lower())
 
         # Step B: Get all unique cluster IDs
         result = await db.execute(
@@ -302,6 +307,12 @@ async def rank_stories() -> list[dict]:
 
             # DEDUPLICATION: Skip cluster if any article in it has already been used in a Script
             if any(a.id in used_article_ids for a in articles):
+                continue
+
+            # DEDUPLICATION: Skip cluster if top headline matches any previously generated script
+            top_h = (articles[0].headline or "").strip().lower() if articles else ""
+            if top_h and any(top_h in ut or ut in top_h for ut in used_titles if len(ut) > 8):
+                logger.info(f"🔄 Skipping duplicate story cluster matching existing script: '{top_h[:50]}'")
                 continue
 
             article_dicts = [

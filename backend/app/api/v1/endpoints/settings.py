@@ -25,7 +25,7 @@ def _build_settings_response() -> SettingsResponse:
         daily_video_count=getattr(settings, "daily_video_count", 3),
         pipeline_schedule_hour=settings.pipeline_schedule_hour,
         pipeline_schedule_minute=settings.pipeline_schedule_minute,
-        pipeline_schedule_hours=getattr(settings, "pipeline_schedule_hours", "8,12,16,20"),
+        pipeline_schedule_hours=getattr(settings, "pipeline_schedule_hours", "16"),
         pipeline_timezone=settings.pipeline_timezone,
         news_discovery_interval_minutes=settings.news_discovery_interval_minutes,
         elevenlabs_voice_id=settings.elevenlabs_voice_id,

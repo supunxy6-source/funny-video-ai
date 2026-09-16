@@ -46,6 +46,67 @@ USER_AGENT = (
 # Request timeout
 REQUEST_TIMEOUT = 15.0
 
+# Strict policy banned words to protect YouTube channel monetization and reach
+POLICY_BANNED_WORDS = [
+    "rape", "raping", "rapist", "pedophile", "pedophilia", "suicide", "suicidal",
+    "murder", "massacre", "beheaded", "slur", "torture", "porn", "nsfw",
+    "nude", "nudity", "incest", "assault", "terrorist", "terrorism", "genocide",
+    "humping", "dildo", "masturbat",
+]
+
+# Moderator, sticky, meta announcement keywords/patterns to discard
+MOD_STICKY_INDICATORS = [
+    "reddit's first-ever", "reddit's first ever", "community awards",
+    "political content", "sub rules", "rules reminder", "discord server",
+    "weekly discussion", "monthly thread", "ban reminder", "pinned post",
+    "state of the sub", "moderator application", "mod post", "submission guidelines",
+]
+
+
+def _is_moderator_or_meta(title: str, author: str = "", summary: str = "") -> bool:
+    """Check if post is a moderator sticky, rules announcement, or Reddit platform promotion."""
+    author_clean = (author or "").strip().lower()
+    if author_clean in ["automoderator", "reddit", "reddit_official"] or author_clean.endswith("-modteam"):
+        return True
+
+    title_lower = (title or "").lower()
+    summary_lower = (summary or "").lower()
+
+    # Bracketed announcement tags at start of title (e.g. [REMINDER], [MOD], [] REMINDER])
+    if re.search(r'^\s*\[?(?:reminder|mod|moderator|megathread|announcement|rules?|psa|meta|update)\]', title_lower):
+        return True
+    if re.search(r'^\s*\[\s*\]\s*(?:reminder|mod|psa)', title_lower):
+        return True
+
+    # Keyword indicators
+    for ind in MOD_STICKY_INDICATORS:
+        if ind in title_lower or ind in summary_lower:
+            return True
+
+    return False
+
+
+def _violates_policy(title: str, body: str = "") -> bool:
+    """Check if content contains terms banned by YouTube / brand safety guidelines."""
+    text = f"{title} {body}".lower()
+    for word in POLICY_BANNED_WORDS:
+        if word in text:
+            return True
+    return False
+
+
+def _clean_title(title: str) -> str:
+    """Clean title of stray bracket artifacts and subreddit tags."""
+    t = (title or "").strip()
+    # Remove leading empty brackets or malformed tags: "[] REMINDER]" -> ""
+    t = re.sub(r'^\s*\[\s*\]\s*', '', t)
+    # Remove bracketed prefixes like [REMINDER] or leftover REMINDER]
+    t = re.sub(r'^\s*\[?[^\]]+\]\s*', '', t)
+    # Remove trailing tags like [OC], [Shorts], etc.
+    t = re.sub(r'\s*\[(?:OC|Shorts)\]\s*$', '', t, flags=re.IGNORECASE)
+    t = re.sub(r'\s*#Shorts\s*$', '', t, flags=re.IGNORECASE)
+    return t.strip()
+
 
 def _clean_reddit_html(summary_html: str) -> str:
     """Extract clean text content from Reddit RSS HTML summary."""
@@ -166,12 +227,31 @@ class RedditScraper:
                 feed = feedparser.parse(resp.text)
                 posts = []
                 for entry in feed.entries[:25]:
-                    title = getattr(entry, "title", "").strip()
-                    if not title:
+                    raw_title = getattr(entry, "title", "").strip()
+                    if not raw_title:
                         continue
 
+                    author = getattr(entry, "author", "")
                     summary = getattr(entry, "summary", "")
                     clean_body = _clean_reddit_html(summary)
+
+                    # Filter 1: Moderator stickies & meta announcements
+                    if _is_moderator_or_meta(raw_title, author, clean_body):
+                        logger.debug(f"Skipping moderator/meta post: {raw_title[:60]}")
+                        continue
+
+                    # Filter 2: Policy violations (violence, NSFW, banned terms)
+                    if _violates_policy(raw_title, clean_body):
+                        logger.warning(f"🛡️ Skipping policy-violating Reddit post: {raw_title[:60]}")
+                        continue
+
+                    # Filter 3: Deleted/removed content or too short
+                    if clean_body.strip().lower() in ["[removed]", "[deleted]"]:
+                        continue
+
+                    title = _clean_title(raw_title)
+                    if len(title) < 8:
+                        continue
 
                     # Extract direct image URL from RSS summary HTML
                     img_match = re.search(r'href="([^"]+\.(?:jpg|png|webp|jpeg))"', summary)
@@ -225,8 +305,23 @@ class RedditScraper:
 
     def _parse_post(self, data: dict, subreddit: str) -> Optional[dict]:
         """Parse a Reddit post into our structured format."""
-        title = data.get("title", "").strip()
-        if not title:
+        raw_title = data.get("title", "").strip()
+        if not raw_title:
+            return None
+
+        author = data.get("author", "")
+        selftext = data.get("selftext", "").strip()
+
+        # Filter 1: Moderator stickies & meta announcements
+        if _is_moderator_or_meta(raw_title, author, selftext):
+            return None
+
+        # Filter 2: Policy violations
+        if _violates_policy(raw_title, selftext):
+            return None
+
+        title = _clean_title(raw_title)
+        if len(title) < 8:
             return None
 
         # Determine content type

@@ -295,8 +295,14 @@ async def run_entertainment_discovery() -> list[dict]:
 
             default_source_id = sources_cache.get("stateside smiles")
 
+            from app.models.script import Script
+
             for item in all_content:
-                # Check for duplicates by title/URL
+                item_title = item.get("title", "").strip()
+                if not item_title:
+                    continue
+
+                # Check for duplicates by title/URL in NewsArticle
                 item_url = item.get("permalink") or item.get("url") or item.get("id", "")
                 if item_url:
                     exists = await db.execute(
@@ -304,6 +310,20 @@ async def run_entertainment_discovery() -> list[dict]:
                     )
                     if exists.scalar_one_or_none() is not None:
                         continue
+
+                # Check if exact headline already collected
+                exists_title = await db.execute(
+                    select(NewsArticle.id).where(NewsArticle.headline == item_title[:500])
+                )
+                if exists_title.scalar_one_or_none() is not None:
+                    continue
+
+                # Check if this topic has already been produced into a Script
+                exists_script = await db.execute(
+                    select(Script.id).where(Script.topic_summary == item_title)
+                )
+                if exists_script.scalar_one_or_none() is not None:
+                    continue
 
                 src_key = (item.get("source") or "stateside smiles").lower()
                 item_source_id = sources_cache.get(src_key, default_source_id)
