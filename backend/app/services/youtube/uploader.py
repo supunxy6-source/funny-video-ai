@@ -50,20 +50,25 @@ class YouTubeUploader:
         category_id: str = None,
         privacy_status: str = "private",
         scheduled_at: Optional[datetime] = None,
+        video_format: str = "shorts",
     ) -> str:
         """
         Upload a video to YouTube.
 
+        Args:
+            video_format: "shorts" or "regular" — controls whether Shorts tags are added.
+
         Returns the YouTube video ID.
         """
         category_id = category_id or getattr(settings, "youtube_category_id", "23")
-        # 2026: Ensure 'shorts' tag is always present for Shorts shelf discovery
         tags_with_shorts = list(tags) if tags else []
-        shorts_tags = {"shorts", "youtubeshorts", "short"}
-        existing_lower = {t.lower() for t in tags_with_shorts}
-        for st in shorts_tags:
-            if st not in existing_lower:
-                tags_with_shorts.append(st)
+        # Only force-add shorts tags for Shorts videos, not regular long-form videos
+        if video_format != "regular":
+            shorts_tags = {"shorts", "youtubeshorts", "short"}
+            existing_lower = {t.lower() for t in tags_with_shorts}
+            for st in shorts_tags:
+                if st not in existing_lower:
+                    tags_with_shorts.append(st)
 
         body = {
             "snippet": {
@@ -256,6 +261,11 @@ async def upload_to_youtube(upload_id: int) -> str:
             # Parse tags
             tags = json.loads(upload.tags) if upload.tags else []
 
+            # Determine video format from the script record
+            from app.models.script import Script
+            script = await db.get(Script, video.script_id)
+            video_format = getattr(script, "video_format", "shorts") if script else "shorts"
+
             # Upload video — sanitize title/description as final safeguard
             clean_title = _ensure_clean_text(upload.title, max_len=100, field_type="title")
             clean_description = _ensure_clean_text(upload.description, max_len=5000, field_type="description")
@@ -269,6 +279,7 @@ async def upload_to_youtube(upload_id: int) -> str:
                 category_id=category_to_use,
                 privacy_status=upload.privacy_status,
                 scheduled_at=upload.scheduled_at,
+                video_format=video_format,
             )
 
             upload.youtube_video_id = yt_video_id

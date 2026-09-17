@@ -745,3 +745,90 @@ def run_full_pipeline(video_count: int = None, pipeline_run_id: str = None):
     pipeline.apply_async()
     return pipeline_run_id
 
+
+# ── Regular (Long-Form) Video Pipeline ──────────────────
+@celery_app.task(name="app.tasks.pipeline.run_regular_video_pipeline")
+def run_regular_video_pipeline(pipeline_run_id: str = None):
+    """
+    Execute a separate daily pipeline to produce 1 regular (16:9, 4-7 min) video.
+    Completely independent of the shorts pipeline — does NOT touch shorts flow.
+
+    Flow:
+    1. Content Discovery (reuses same discovery service)
+    2. Analysis & Ranking (reuses same clustering/ranking)
+    3. Pick top story and inject video_format="regular"
+    4. Produce single regular video via produce_single_story_pipeline()
+    """
+    from app.core.config import settings
+
+    if not getattr(settings, "regular_video_enabled", True):
+        logger.info("📺 Regular video pipeline disabled — skipping")
+        return {"pipeline_run_id": pipeline_run_id or "skipped", "status": "disabled"}
+
+    pipeline_run_id = pipeline_run_id or f"regular_{uuid.uuid4().hex[:10]}"
+    logger.info(f"📺 Starting regular (long-form) video pipeline: {pipeline_run_id}")
+
+    async def _execute_regular():
+        # 1. Discovery
+        job_id = await _create_job(pipeline_run_id, "discovery", 1)
+        try:
+            await _log(pipeline_run_id, "INFO", "Starting content discovery for regular video", "discovery", job_id)
+            from app.services.discovery.collector import run_discovery
+            articles = await run_discovery()
+            await _complete_job(job_id, "completed")
+            await _log(pipeline_run_id, "INFO", f"Discovery finished: {len(articles)} content items collected", "discovery", job_id)
+        except Exception as exc:
+            await _complete_job(job_id, "failed", str(exc))
+            await _log(pipeline_run_id, "ERROR", f"Discovery failed: {exc}", "discovery", job_id)
+            raise exc
+
+        # 2. Analysis & Ranking
+        job_id = await _create_job(pipeline_run_id, "analysis", 2)
+        try:
+            await _log(pipeline_run_id, "INFO", "Clustering and ranking content for regular video", "analysis", job_id)
+            from app.services.analysis.clusterer import run_clustering
+            from app.services.analysis.ranker import rank_stories
+            from app.services.analysis.verifier import verify_top_stories
+
+            await run_clustering()
+            ranked = await rank_stories()
+            verified = await verify_top_stories(ranked)
+
+            if not verified:
+                await _complete_job(job_id, "completed")
+                await _log(pipeline_run_id, "WARNING", "No verified content found for regular video", "analysis", job_id)
+                return {"pipeline_run_id": pipeline_run_id, "status": "no_content"}
+
+            # Pick the top story for the regular video
+            top_story = verified[0]
+            await _complete_job(job_id, "completed")
+            await _log(pipeline_run_id, "INFO", f"Selected top story for regular video: {top_story.get('top_headline', '')[:80]}", "analysis", job_id)
+        except Exception as exc:
+            await _complete_job(job_id, "failed", str(exc))
+            await _log(pipeline_run_id, "ERROR", f"Analysis failed: {exc}", "analysis", job_id)
+            raise exc
+
+        # 3. Inject video_format="regular" and produce the video
+        top_story["video_format"] = "regular"
+
+        try:
+            result = await produce_single_story_pipeline(
+                top_story,
+                pipeline_run_id,
+                story_index=1,
+                total_stories=1,
+                scheduled_at=None,
+            )
+        except Exception as e:
+            logger.error(f"Error producing regular video: {e}")
+            result = {"story_index": 1, "status": "failed", "error": str(e)}
+
+        # Mark completion
+        job_id = await _create_job(pipeline_run_id, "regular_completion", 100)
+        await _complete_job(job_id, "completed")
+
+        status = result.get("status", "unknown")
+        await _log(pipeline_run_id, "INFO", f"📺 Regular video pipeline completed: {status}", "pipeline")
+        return {"pipeline_run_id": pipeline_run_id, "status": status, "result": result}
+
+    return _run_async(_execute_regular())
