@@ -19,6 +19,9 @@ class Script(TimestampMixin, Base):
     duration_estimate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # minutes
     llm_provider: Mapped[str] = mapped_column(String(50), nullable=False, default="openai")
     llm_model: Mapped[str] = mapped_column(String(100), nullable=False, default="gpt-4o")
+    video_format: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="shorts"
+    )  # shorts | regular
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="draft", index=True
     )  # draft, approved, used, rejected

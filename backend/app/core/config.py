@@ -129,6 +129,10 @@ class Settings(BaseSettings):
     pipeline_timezone: str = "UTC"
     content_discovery_interval_minutes: int = 120
 
+    # ── Regular (Long-Form) Video Pipeline ────────────
+    regular_video_enabled: bool = True  # Enable daily regular (16:9) video production
+    regular_video_schedule_hour: int = 10  # UTC hour to run the regular video pipeline
+
     # ── Notifications ──────────────────────────────────
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587

@@ -58,6 +58,19 @@ celery_app.conf.beat_schedule = {
     },
 }
 
+# ── Conditional: Regular (Long-Form) Video Pipeline ────────
+# Adds a separate daily schedule for producing 1 regular 16:9 video
+if getattr(settings, "regular_video_enabled", True):
+    _regular_hour = getattr(settings, "regular_video_schedule_hour", 10)
+    celery_app.conf.beat_schedule["daily-regular-video"] = {
+        "task": "app.tasks.pipeline.run_regular_video_pipeline",
+        "schedule": crontab(
+            hour=_regular_hour,
+            minute=0,
+        ),
+        "options": {"queue": "default"},
+    }
+
 
 @celery_app.task(name="app.tasks.scheduled.cleanup_temp_files")
 def cleanup_temp_files():

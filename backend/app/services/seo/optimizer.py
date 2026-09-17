@@ -94,9 +94,14 @@ class SEOOptimizer:
     def __init__(self):
         self.llm = LLMClient()
 
-    async def optimize(self, script: dict, scenes: list[dict]) -> dict:
+    async def optimize(self, script: dict, scenes: list[dict], video_format: str = "shorts") -> dict:
         """
         Generate complete SEO metadata for a video.
+
+        Args:
+            script: Script data dict
+            scenes: List of scene dicts
+            video_format: "shorts" or "regular" — controls tags, hashtags, title format
 
         Returns dict with title, description, tags, hashtags, chapters, pinned_comment.
         """
@@ -104,6 +109,7 @@ class SEOOptimizer:
         script_title = script.get("title", "")
         content_mode = getattr(settings, "content_mode", "entertainment")
         category = "Comedy" if content_mode == "entertainment" else script.get("category", "News")
+        is_regular = video_format == "regular"
 
         # Generate SEO title — now generates 3 variants and picks the best
         seo_title = await self._generate_title(topic, script_title)
@@ -117,20 +123,35 @@ class SEOOptimizer:
             seo_title, topic, scene_titles, chapters
         )
 
-        # Generate tags with YouTube Shorts tags prepended
+        # Generate tags
         tags = await self._generate_tags(seo_title, topic, category)
 
-        if content_mode == "entertainment":
-            base_tags = [
-                "funny", "memes", "comedy", "try not to laugh",
-                "funny videos", "meme compilation", "funny memes",
-                "viral", "trending",
-            ]
+        if is_regular:
+            # Regular video tags — no Shorts-specific tags
+            if content_mode == "entertainment":
+                base_tags = [
+                    "funny", "memes", "comedy", "try not to laugh",
+                    "funny videos", "meme compilation", "funny memes",
+                    "viral", "trending", "comedy video",
+                ]
+            else:
+                base_tags = [
+                    "news", "world news", "breaking news",
+                    "news today", "trending", "viral",
+                ]
         else:
-            base_tags = [
-                "shorts", "youtubeshorts", "ytshorts", "short",
-                "viral shorts", "trending shorts", "news shorts", "breaking news",
-            ]
+            # Shorts tags — prepend YouTube Shorts discovery tags
+            if content_mode == "entertainment":
+                base_tags = [
+                    "funny", "memes", "comedy", "try not to laugh",
+                    "funny videos", "meme compilation", "funny memes",
+                    "viral", "trending",
+                ]
+            else:
+                base_tags = [
+                    "shorts", "youtubeshorts", "ytshorts", "short",
+                    "viral shorts", "trending shorts", "news shorts", "breaking news",
+                ]
         for st in reversed(base_tags):
             if st not in tags:
                 tags.insert(0, st)
@@ -154,17 +175,31 @@ class SEOOptimizer:
             if tt not in tags:
                 tags.append(tt)
 
-        # Generate hashtags — expanded for Shorts discovery with niche tags
-        if content_mode == "entertainment":
-            base_hashtags = [
-                "#Shorts", "#Funny", "#Memes", "#Comedy", "#Viral",
-                "#Trending", "#TryNotToLaugh", "#StatesideSmiles",
-            ]
+        # Generate hashtags
+        if is_regular:
+            # Regular video hashtags — no #Shorts
+            if content_mode == "entertainment":
+                base_hashtags = [
+                    "#Funny", "#Memes", "#Comedy", "#Viral",
+                    "#Trending", "#TryNotToLaugh", "#StatesideSmiles",
+                ]
+            else:
+                base_hashtags = [
+                    "#News", "#Trending", "#BreakingNews",
+                    "#WorldNews", "#NewsToday", "#ViralNews",
+                ]
         else:
-            base_hashtags = [
-                "#Shorts", "#News", "#Trending", "#BreakingNews",
-                "#WorldNews", "#NewsToday", "#ViralNews",
-            ]
+            # Shorts hashtags
+            if content_mode == "entertainment":
+                base_hashtags = [
+                    "#Shorts", "#Funny", "#Memes", "#Comedy", "#Viral",
+                    "#Trending", "#TryNotToLaugh", "#StatesideSmiles",
+                ]
+            else:
+                base_hashtags = [
+                    "#Shorts", "#News", "#Trending", "#BreakingNews",
+                    "#WorldNews", "#NewsToday", "#ViralNews",
+                ]
         topic_words = [w.strip() for w in topic.split() if len(w.strip()) >= 4]
         niche_hashtags = []
         for word in topic_words[:3]:
@@ -199,11 +234,17 @@ class SEOOptimizer:
         # Generate engagement-optimized pinned comment with polarizing debate hooks
         pinned_comment = await self._generate_pinned_comment(topic, seo_title)
 
-        # Ensure clean, mobile-safe #Shorts title without mid-word truncation
-        clean_title = format_shorts_title(seo_title, max_base_len=68)
+        # Format title based on video format
+        if is_regular:
+            # Regular video: longer title, no #Shorts appended
+            clean_title = _sanitize_seo_title(seo_title)
+            clean_title = _truncate_at_word_boundary(clean_title, 80)
+        else:
+            # Shorts: ensure clean, mobile-safe #Shorts title
+            clean_title = format_shorts_title(seo_title, max_base_len=68)
 
         result = {
-            "title": clean_title,  # YouTube 100 char limit (mobile sweet spot 35-48 chars)
+            "title": clean_title,  # YouTube 100 char limit
             "description": description[:5000],  # YouTube 5000 char limit
             "tags": json.dumps(tags[:30]),  # Max 30 tags
             "hashtags": " ".join(hashtags),
@@ -214,7 +255,8 @@ class SEOOptimizer:
         # Final validation
         result["description"] = _sanitize_description(result["description"])
 
-        logger.info(f"🔍 SEO optimized (Shorts): '{result['title']}' ({len(tags)} tags)")
+        format_label = "Regular" if is_regular else "Shorts"
+        logger.info(f"🔍 SEO optimized ({format_label}): '{result['title']}' ({len(tags)} tags)")
         return result
 
     async def _generate_title(self, topic: str, script_title: str) -> str:
@@ -681,7 +723,10 @@ async def optimize_seo(video_id: int, scheduled_at: datetime = None) -> int:
             for s in scenes
         ]
 
-        seo_data = await optimizer.optimize(script_dict, scene_dicts)
+        # Determine video format from the script record
+        video_format = getattr(script, "video_format", "shorts") or "shorts"
+
+        seo_data = await optimizer.optimize(script_dict, scene_dicts, video_format=video_format)
 
         # Final safeguard: ensure title and description are never raw JSON
         upload_title = seo_data["title"]

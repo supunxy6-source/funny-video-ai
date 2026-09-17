@@ -321,11 +321,13 @@ class ScriptWriter:
         shorts_duration_mode = getattr(settings, "shorts_duration_mode", "micro")
         is_story_mode = (meme_style == "story" or content_type == "story")
 
-        if is_story_mode:
+        if video_format == "regular":
+            # Regular (long-form) videos always use REGULAR_VIDEO_PROMPT
+            system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
+            prompt = REGULAR_VIDEO_PROMPT.format(content_text=content_text)
+        elif is_story_mode:
             system_prompt = STORY_SYSTEM_PROMPT
-            if video_format == "regular":
-                prompt = STORY_REGULAR_PROMPT.format(content_text=content_text)
-            elif shorts_duration_mode == "micro":
+            if shorts_duration_mode == "micro":
                 prompt = MICRO_SHORTS_PROMPT.format(
                     content_text=content_text,
                     content_type=content_type,
@@ -335,9 +337,6 @@ class ScriptWriter:
                     content_text=content_text,
                     content_type=content_type,
                 )
-        elif video_format == "regular":
-            system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
-            prompt = REGULAR_VIDEO_PROMPT.format(content_text=content_text)
         elif content_type == "meme":
             system_prompt = ENTERTAINMENT_SYSTEM_PROMPT
             prompt = MEME_COMPILATION_PROMPT.format(
@@ -729,6 +728,9 @@ async def generate_script_for_story(story: dict) -> int:
     script_data = await writer.generate_script(story)
 
     async with async_session_factory() as db:
+        # Determine video format (defaults to "shorts" if not specified)
+        video_format = story.get("video_format", "shorts")
+
         # Create script record
         script = Script(
             title=script_data["title"],
@@ -740,6 +742,7 @@ async def generate_script_for_story(story: dict) -> int:
             duration_estimate=script_data["duration_estimate"],
             llm_provider=script_data["llm_provider"],
             llm_model=script_data["llm_model"],
+            video_format=video_format,
             status="draft",
         )
         db.add(script)

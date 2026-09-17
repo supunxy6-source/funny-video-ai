@@ -101,3 +101,16 @@ async def trigger_pipeline(
         "task_id": str(task),
         "video_count": video_count,
     }
+
+
+@router.post("/trigger-regular")
+async def trigger_regular_pipeline(
+    _=Depends(get_current_user),
+):
+    """Manually trigger the regular (long-form 16:9) video pipeline for 1 video."""
+    from app.tasks.pipeline import run_regular_video_pipeline
+    task = run_regular_video_pipeline.delay()
+    return {
+        "message": "Regular (long-form) video pipeline triggered",
+        "task_id": str(task),
+    }

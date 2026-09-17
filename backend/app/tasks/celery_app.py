@@ -48,6 +48,7 @@ celery_app.conf.update(
     task_routes={
         "app.tasks.pipeline.run_full_pipeline": {"queue": "default"},
         "app.tasks.pipeline.run_batch_pipeline": {"queue": "default"},
+        "app.tasks.pipeline.run_regular_video_pipeline": {"queue": "default"},
         "app.tasks.pipeline.task_discover_news": {"queue": "discovery"},
         "app.tasks.pipeline.task_analyze_stories": {"queue": "analysis"},
         "app.tasks.pipeline.task_generate_script": {"queue": "production"},
