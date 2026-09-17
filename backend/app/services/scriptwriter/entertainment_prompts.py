@@ -10,6 +10,118 @@ Content styles:
 - Funny facts & trending topic commentary
 """
 
+
+# ═══════════════════════════════════════════════════════════════════════
+# Series Themes — Recurring branded content categories
+# Drives returning viewers and subscribe intent by creating "collection" feel
+# ═══════════════════════════════════════════════════════════════════════
+
+SERIES_THEMES = {
+    "petty_revenge": {
+        "name": "Petty Revenge Hall of Fame",
+        "emoji": "🏆",
+        "subreddits": ["pettyrevenge", "prorevenge", "nuclearrevenge"],
+        "hook_templates": [
+            "Welcome to another entry in the Petty Revenge Hall of Fame...",
+            "This one just earned a spot in the Petty Revenge Hall of Fame...",
+        ],
+        "hashtag": "#PettyRevengeHallOfFame",
+        "tags": ["petty revenge stories", "best revenge stories", "revenge compilation", "petty revenge hall of fame"],
+    },
+    "am_i_the_villain": {
+        "name": "Am I The Villain?",
+        "emoji": "⚖️",
+        "subreddits": ["amitheasshole"],
+        "hook_templates": [
+            "Time for another Am I The Villain...",
+            "You be the judge on this one...",
+        ],
+        "hashtag": "#AmITheVillain",
+        "tags": ["am i the villain", "aita stories", "reddit aita", "who was wrong"],
+    },
+    "tales_from_trenches": {
+        "name": "Tales From The Trenches",
+        "emoji": "💼",
+        "subreddits": ["maliciouscompliance", "idontworkherelady", "choosingbeggars", "entitledparents"],
+        "hook_templates": [
+            "Another tale from the trenches...",
+            "You will not believe this one from the trenches...",
+        ],
+        "hashtag": "#TalesFromTheTrenches",
+        "tags": ["work stories", "malicious compliance", "entitled people", "customer stories", "tales from the trenches"],
+    },
+    "internets_unhinged": {
+        "name": "Internet's Unhinged Moments",
+        "emoji": "🔥",
+        "subreddits": ["tifu", "confession"],
+        "hook_templates": [
+            "The internet really outdid itself with this one...",
+            "This is peak unhinged internet...",
+        ],
+        "hashtag": "#InternetsUnhingedMoments",
+        "tags": ["tifu stories", "internet stories", "unhinged moments", "reddit confessions"],
+    },
+    "dad_joke_danger_zone": {
+        "name": "Dad Joke Danger Zone",
+        "emoji": "😂",
+        "subreddits": ["dadjokes", "jokes"],
+        "hook_templates": [
+            "Entering the Dad Joke Danger Zone...",
+            "Brace yourself for this one...",
+        ],
+        "hashtag": "#DadJokeDangerZone",
+        "tags": ["dad jokes", "best jokes", "funny jokes", "dad joke danger zone"],
+    },
+    "made_my_day": {
+        "name": "Made My Day",
+        "emoji": "😄",
+        "subreddits": ["wholesomememes", "mademesmile"],
+        "hook_templates": [
+            "This one genuinely made my entire day...",
+            "You need to see this right now...",
+        ],
+        "hashtag": "#MadeMyDay",
+        "tags": ["wholesome stories", "made my day", "wholesome memes", "feel good stories"],
+    },
+    "askreddit_gold": {
+        "name": "AskReddit Gold",
+        "emoji": "💎",
+        "subreddits": ["askreddit"],
+        "hook_templates": [
+            "AskReddit just dropped absolute gold...",
+            "Someone asked the internet this and the answers are wild...",
+        ],
+        "hashtag": "#AskRedditGold",
+        "tags": ["askreddit stories", "best of askreddit", "reddit answers", "askreddit gold"],
+    },
+}
+
+# Build lookup: subreddit -> series key
+_SUBREDDIT_TO_SERIES = {}
+for _key, _theme in SERIES_THEMES.items():
+    for _sub in _theme["subreddits"]:
+        _SUBREDDIT_TO_SERIES[_sub.lower()] = _key
+
+
+def get_series_for_subreddit(subreddit: str) -> dict:
+    """Get the series theme for a given subreddit.
+
+    Returns the series theme dict, or a generic fallback if no series matches.
+    """
+    sub_lower = (subreddit or "").lower()
+    series_key = _SUBREDDIT_TO_SERIES.get(sub_lower)
+    if series_key:
+        return SERIES_THEMES[series_key]
+    # Generic fallback
+    return {
+        "name": "Stateside Smiles",
+        "emoji": "😂",
+        "subreddits": [],
+        "hook_templates": [],
+        "hashtag": "#StatesideSmiles",
+        "tags": ["funny stories", "comedy", "viral"],
+    }
+
 # ═══════════════════════════════════════════════════════════════════════
 # System Prompt — Natural Storyteller Persona (Story Mode)
 # ═══════════════════════════════════════════════════════════════════════

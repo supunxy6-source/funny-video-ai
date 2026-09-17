@@ -161,18 +161,38 @@ MEME_OVERLAY_CONFIG = {
     "bottom_margin": 50,
 }
 
-# ── Subscribe CTA Overlay (Last 2 seconds of video) ───
+# ── Subscribe CTA Overlay (Mid-video — 40-60% of duration) ───
+# Moved from end-of-video to mid-video because Shorts viewers swipe
+# before the end (20-37% "Stayed to Watch" rate). Mid-video placement
+# ensures the CTA is actually seen by most viewers.
 SUBSCRIBE_OVERLAY_CONFIG = {
-    "text": "😂 Subscribe to Stateside Smiles!",
-    "font_size": 38,
+    "text": "😂 Subscribe for more!",  # Series-aware CTA set dynamically
+    "font_size": 36,
     "font_color": "#FFFFFF",
     "bg_color": "#EC4899DD",       # Hot pink, semi-transparent
     "border_radius": 20,
     "position_y_offset": 200,      # From bottom
-    "padding_x": 40,
-    "padding_y": 14,
-    "duration": 2.5,               # Show for last 2.5 seconds
-    "fade_in": 0.25,
+    "padding_x": 36,
+    "padding_y": 12,
+    "duration": 1.8,               # Shorter = less intrusive, higher completion
+    "fade_in": 0.2,
+    "placement": "mid_video",       # 'mid_video' = 40-60%, 'end' = last N seconds
+    "mid_video_ratio": 0.5,        # Show at 50% of total duration
+}
+
+# ── Series Pill Overlay (Top of screen, first 4 seconds) ──
+# Shows the recurring series name to build brand recognition
+# e.g., "🏆 Petty Revenge Hall of Fame"
+SERIES_PILL_CONFIG = {
+    "font_size": 28,
+    "font_color": "#FFFFFF",
+    "bg_color": "#7C3AEDDD",       # Purple, semi-transparent
+    "border_radius": 16,
+    "position_y": 80,              # Near top (below status bar safe zone)
+    "padding_x": 24,
+    "padding_y": 10,
+    "duration": 4.0,               # Show for first 4 seconds
+    "fade_in": 0.3,
 }
 
 # ── Intro/Outro (REMOVED — every second is content) ───

@@ -375,6 +375,72 @@ class ScriptWriter:
         # Parse the structured response
         script_data = self._parse_script_response(response)
 
+        # ── Hook Validation & Auto-Retry ──
+        # Validate Scene 1 hook — weak hooks cause immediate swipe-away
+        scenes = script_data.get("scenes", [])
+        if scenes:
+            hook_scene = scenes[0]
+            hook_text = hook_scene.get("text", "")
+            hook_result = validate_hook(hook_text)
+
+            if not hook_result["is_valid"]:
+                logger.warning(
+                    f"⚠️ Weak hook detected ({hook_result['severity']}): "
+                    f"{hook_result['issues']} — attempting auto-fix"
+                )
+                # One retry with reinforced hook prompt
+                try:
+                    reinforced_prompt = (
+                        f"Rewrite ONLY the opening hook for this comedy short. "
+                        f"The current hook is too weak: '{hook_text}'\n"
+                        f"Issues: {', '.join(hook_result['issues'])}\n\n"
+                        f"RULES:\n"
+                        f"- Start with IMMEDIATE mid-action conflict (under 8 words)\n"
+                        f"- NEVER start with: 'So', 'Today', 'Here', 'Welcome', 'Let me', 'Picture this'\n"
+                        f"- Must contain a conflict, disbelief, or forbidden curiosity word\n"
+                        f"- Example: '...nobody warned him about this floor'\n\n"
+                        f"Story context: {topic_summary[:200]}\n\n"
+                        f"Output ONLY the new hook text, nothing else."
+                    )
+                    new_hook = await self.llm.generate(
+                        prompt=reinforced_prompt,
+                        max_tokens=100,
+                        temperature=0.9,
+                    )
+                    new_hook = new_hook.strip().strip('"\'')
+                    if new_hook and len(new_hook) > 5:
+                        scenes[0]["text"] = new_hook
+                        logger.info(f"✅ Hook auto-fixed: '{new_hook[:60]}'")
+                except Exception as retry_err:
+                    logger.debug(f"Hook auto-fix failed (keeping original): {retry_err}")
+
+            # ── Loop Validation (informational logging) ──
+            if len(scenes) >= 2:
+                last_scene = scenes[-1]
+                loop_result = validate_loop(last_scene.get("text", ""), hook_text)
+                if not loop_result["is_valid"]:
+                    logger.info(f"🔄 Loop validation: {loop_result['issues']}")
+
+        # ── Inject Series Branding ──
+        # Determine series from source subreddit for recurring branded content
+        series_info = None
+        if articles:
+            source_sub = ""
+            first_article = articles[0]
+            # Try to get subreddit from keywords JSON
+            keywords_str = first_article.get("keywords", "")
+            if keywords_str and isinstance(keywords_str, str):
+                try:
+                    kw = json.loads(keywords_str)
+                    source_sub = kw.get("subreddit", "")
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            if not source_sub:
+                source_sub = first_article.get("subreddit", "")
+            if source_sub:
+                from app.services.scriptwriter.entertainment_prompts import get_series_for_subreddit
+                series_info = get_series_for_subreddit(source_sub)
+
         # Calculate metrics
         full_text = " ".join(s["text"] for s in script_data.get("scenes", []))
         word_count = len(full_text.split())
@@ -396,11 +462,13 @@ class ScriptWriter:
             "llm_provider": self.llm.provider,
             "llm_model": self._get_model_name(),
             "scenes": script_data.get("scenes", []),
+            "series_info": series_info,  # Pass series info downstream
         }
 
         logger.info(
             f"✅ {mode_label.capitalize()} script generated: '{result['title']}' "
             f"({word_count} words, ~{result['duration_estimate']} min)"
+            + (f" [Series: {series_info['name']}]" if series_info else "")
         )
 
         return result
@@ -750,3 +818,106 @@ def sanitize_title(raw_title: str) -> str:
         title = title[:97].rsplit(" ", 1)[0] + "..."
 
     return title
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Hook Validation — Prevents weak Scene 1 openings that cause swipe-away
+# ═══════════════════════════════════════════════════════════════════════
+
+# Banned hook opening phrases — these cause immediate drop-off on Shorts
+WEAK_HOOK_PATTERNS = [
+    "so ", "so,", "today ", "today,", "here ", "welcome ", "let me ",
+    "picture this", "i still", "in this video", "hey guys", "hey everyone",
+    "what's up", "listen up", "okay so", "alright so", "now ", "now,",
+    "i want to", "imagine ", "have you ever", "this is a story",
+    "let's talk", "we need to talk", "i need to tell",
+]
+
+# Minimum engagement trigger words that a strong hook should contain
+HOOK_TRIGGER_WORDS = [
+    "never", "nobody", "worst", "best", "insane", "thought",
+    "caught", "fired", "quit", "revenge", "entitled", "karen",
+    "mistake", "regret", "wrong", "villain", "petty", "banned",
+    "unhinged", "wild", "bold", "warned", "challenged", "dared",
+    "really", "actually", "honestly", "seriously",
+]
+
+
+def validate_hook(scene_text: str) -> dict:
+    """Validate that a Scene 1 hook is strong enough for Shorts retention.
+
+    Returns:
+        dict with 'is_valid' (bool), 'issues' (list of str), 'severity' (str)
+    """
+    if not scene_text or not scene_text.strip():
+        return {"is_valid": False, "issues": ["Empty hook"], "severity": "critical"}
+
+    text = scene_text.strip()
+    text_lower = text.lower()
+    issues = []
+
+    # Check 1: Banned opening phrases
+    for pattern in WEAK_HOOK_PATTERNS:
+        if text_lower.startswith(pattern):
+            issues.append(f"Starts with weak phrase: '{pattern.strip()}'")
+            break
+
+    # Check 2: Too long (hook should be under 12 words for 1.5-second delivery)
+    word_count = len(text.split())
+    if word_count > 15:
+        issues.append(f"Hook is {word_count} words (max 12 for 1.5s delivery)")
+
+    # Check 3: Missing engagement trigger (optional but informative)
+    has_trigger = any(word in text_lower for word in HOOK_TRIGGER_WORDS)
+    has_question = "?" in text
+    has_ellipsis = "..." in text
+    if not has_trigger and not has_question and not has_ellipsis:
+        issues.append("No engagement trigger word, question, or suspense ellipsis")
+
+    severity = "critical" if any("Starts with weak" in i for i in issues) else (
+        "warning" if issues else "ok"
+    )
+
+    return {
+        "is_valid": len(issues) == 0 or severity == "warning",
+        "issues": issues,
+        "severity": severity,
+    }
+
+
+def validate_loop(last_scene_text: str, first_scene_text: str) -> dict:
+    """Validate that the last scene's ending can grammatically loop into Scene 1.
+
+    A strong loop ends with an incomplete connector clause (e.g., '...and that
+    is the exact reason why') that flows into the hook.
+
+    Returns:
+        dict with 'is_valid' (bool) and 'issues' (list of str)
+    """
+    if not last_scene_text or not first_scene_text:
+        return {"is_valid": False, "issues": ["Missing scene text"]}
+
+    last_text = last_scene_text.strip()
+    issues = []
+
+    # Check: Last scene should NOT end with a period (indicates conclusion, not loop)
+    if last_text.endswith(".") and not last_text.endswith("..."):
+        issues.append("Last scene ends with a period — breaks the loop")
+
+    # Check: Loop connectors that bridge back to Scene 1
+    loop_connectors = [
+        "why", "because", "that", "when", "how", "what",
+        "reason", "exactly", "which is", "and that",
+    ]
+    last_words = last_text[-60:].lower()
+    has_connector = any(conn in last_words for conn in loop_connectors)
+    ends_with_ellipsis = last_text.endswith("...")
+
+    if not has_connector and not ends_with_ellipsis:
+        issues.append("No loop connector phrase at end of last scene")
+
+    return {
+        "is_valid": len(issues) == 0,
+        "issues": issues,
+    }
+

@@ -24,11 +24,44 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 # Default comedy & narrative subreddits to scrape
+# Prioritize STORY-HEAVY subs that produce narration-friendly Shorts content.
+# Image-only subs (r/funny, r/memes) removed — they don't translate to narrated Shorts.
 DEFAULT_SUBREDDITS = [
-    "tifu", "pettyrevenge", "confession", "MaliciousCompliance",
-    "AskReddit", "dadjokes", "jokes", "funny", "memes",
+    # Tier 1: Best for narrated comedy Shorts (conflict-driven stories)
+    "pettyrevenge", "ProRevenge", "nuclearrevenge",
+    "MaliciousCompliance", "AmItheAsshole",
+    "tifu", "IDontWorkHereLady", "ChoosingBeggars",
+    # Tier 2: Good story/joke content
+    "EntitledParents", "confession", "AskReddit",
+    "dadjokes", "jokes",
+    # Tier 3: Wholesome/feel-good (variety)
     "wholesomememes", "MadeMeSmile",
 ]
+
+# Subreddits that require substantial body text for good narration
+STORY_SUBREDDITS = {
+    "pettyrevenge", "prorevenge", "nuclearrevenge",
+    "maliciouscompliance", "amitheasshole",
+    "tifu", "idontworkherelady", "choosingbeggars",
+    "entitledparents", "confession",
+}
+
+# Minimum body length (chars) for story subreddits — short posts make bad narrated Shorts
+MIN_STORY_BODY_LENGTH = 150
+
+# Engagement signal words in titles — proxy for virality when real scores unavailable (RSS)
+VIRALITY_SIGNAL_WORDS = {
+    "tier1": [  # High-engagement signals (debate bait, emotional hooks)
+        "aita", "am i the", "who was wrong", "is this petty", "revenge",
+        "entitled", "karen", "boss", "fired", "quit", "caught",
+        "never again", "worst", "best", "insane", "unbelievable",
+    ],
+    "tier2": [  # Medium-engagement signals
+        "neighbor", "roommate", "coworker", "teacher", "customer",
+        "wedding", "family", "parents", "friend", "ex",
+        "finally", "update", "part 2", "aftermath",
+    ],
+}
 
 # Reddit JSON/RSS API base URL
 REDDIT_BASE = "https://www.reddit.com"
@@ -136,6 +169,64 @@ def _clean_reddit_html(summary_html: str) -> str:
     paragraphs = [re.sub(r'[ \t]+', ' ', p).strip() for p in text.split('\n')]
     cleaned = "\n".join(p for p in paragraphs if p)
     return cleaned.strip()
+
+
+def _calculate_rss_virality(title: str, body: str, subreddit: str) -> dict:
+    """Calculate engagement-signal-based virality score for RSS posts.
+
+    Since Reddit RSS feeds don't include real scores (upvotes, comments),
+    we estimate virality using title/body engagement signals instead of
+    fake random numbers. This produces a meaningful ranking.
+    """
+    title_lower = title.lower()
+    body_lower = (body or "").lower()
+    combined = f"{title_lower} {body_lower}"
+
+    base_score = 400
+
+    # Tier 1 signal words (high engagement: debate bait, emotional hooks)
+    for word in VIRALITY_SIGNAL_WORDS["tier1"]:
+        if word in combined:
+            base_score += 200
+            break  # Count only best tier match
+
+    # Tier 2 signal words (medium engagement)
+    for word in VIRALITY_SIGNAL_WORDS["tier2"]:
+        if word in combined:
+            base_score += 100
+            break
+
+    # Question mark in title = debate bait (drives comments)
+    if "?" in title:
+        base_score += 150
+
+    # Body length bonus — longer stories = more watch time potential
+    body_len = len(body or "")
+    if body_len > 500:
+        base_score += 200
+    elif body_len > 300:
+        base_score += 100
+    elif body_len > 150:
+        base_score += 50
+
+    # Story subreddit bonus (these produce the best narrated Shorts)
+    if subreddit in STORY_SUBREDDITS:
+        base_score += 150
+
+    # Exclamation / emotional punctuation boost
+    if "!" in title:
+        base_score += 30
+
+    # Estimate engagement metrics from score
+    estimated_score = base_score + random.randint(0, 200)
+    estimated_comments = max(20, base_score // 5 + random.randint(0, 50))
+    virality_score = base_score + (estimated_comments * 1.5)
+
+    return {
+        "estimated_score": estimated_score,
+        "estimated_comments": estimated_comments,
+        "virality_score": virality_score,
+    }
 
 
 class RedditScraper:
@@ -253,6 +344,13 @@ class RedditScraper:
                     if len(title) < 8:
                         continue
 
+                    # Filter 4: Story subreddits need substantial body text for narration
+                    sub_lower = subreddit.lower()
+                    selftext = clean_body if clean_body else title
+                    if sub_lower in STORY_SUBREDDITS and len(selftext) < MIN_STORY_BODY_LENGTH:
+                        logger.debug(f"Skipping short story post ({len(selftext)} chars): {title[:50]}")
+                        continue
+
                     # Extract direct image URL from RSS summary HTML
                     img_match = re.search(r'href="([^"]+\.(?:jpg|png|webp|jpeg))"', summary)
                     image_url = img_match.group(1) if img_match else None
@@ -260,18 +358,20 @@ class RedditScraper:
                     post_id = getattr(entry, "id", "") or getattr(entry, "link", "")
 
                     # Determine content type: story, joke, or image
-                    selftext = clean_body if clean_body else title
-                    sub_lower = subreddit.lower()
                     if image_url:
                         content_type = "image"
                     elif sub_lower in ["jokes", "dadjokes", "cleanjokes"]:
                         content_type = "joke"
-                    elif sub_lower in ["tifu", "pettyrevenge", "confession", "maliciouscompliance", "askreddit", "stories"]:
+                    elif sub_lower in STORY_SUBREDDITS or sub_lower in ["askreddit", "stories"]:
                         content_type = "story"
                     elif len(clean_body) > 120:
                         content_type = "story"
                     else:
                         content_type = "text"
+
+                    # Calculate engagement-signal-based virality score
+                    # RSS feeds don't include real scores, so we use title/body signals
+                    virality = _calculate_rss_virality(title, selftext, sub_lower)
 
                     posts.append({
                         "id": post_id,
@@ -284,11 +384,11 @@ class RedditScraper:
                         "video_url": None,
                         "permalink": getattr(entry, "link", ""),
                         "url": getattr(entry, "link", ""),
-                        "score": random.randint(800, 5000),  # Top/hot posts on Reddit
-                        "num_comments": random.randint(50, 400),
-                        "upvote_ratio": 0.92,
+                        "score": virality["estimated_score"],
+                        "num_comments": virality["estimated_comments"],
+                        "upvote_ratio": 0.90,
                         "awards": 0,
-                        "virality_score": 500 + random.randint(100, 500),
+                        "virality_score": virality["virality_score"],
                         "author": getattr(entry, "author", ""),
                         "created_at": datetime.now(timezone.utc),
                         "category": "comedy",
