@@ -1,21 +1,12 @@
-name: Scheduled Shorts Pipeline
+name: Scheduled Regular Video Pipeline
 
 on:
   schedule:
-    - cron: '0 16 * * *'  # Runs daily at 16:00 UTC (12:00 PM US Eastern Time)
-  workflow_dispatch:      # Allows manual trigger from the GitHub UI
-    inputs:
-      pipeline_type:
-        description: 'Pipeline Type to run'
-        required: true
-        default: 'shorts'
-        type: choice
-        options:
-          - shorts
-          - regular
+    - cron: '0 10 * * *'  # Runs daily at 10:00 UTC (1 long-form 16:9 video per day)
+  workflow_dispatch:      # Allows manual trigger from the GitHub Actions UI
 
 jobs:
-  run-pipeline:
+  run-regular-pipeline:
     runs-on: ubuntu-latest
     
     steps:
@@ -65,10 +56,10 @@ jobs:
           done
           echo "API is healthy!"
 
-      - name: Run Pipeline Script
+      - name: Run Regular Video Pipeline Script
         run: |
-          # Run the script inside the 'worker' container with selected pipeline type
-          docker compose exec -T worker python scripts/trigger_and_wait.py --type "${{ github.event.inputs.pipeline_type || 'shorts' }}"
+          # Run regular (16:9 long-form) video pipeline inside worker container
+          docker compose exec -T worker python scripts/trigger_and_wait.py --type regular
 
       - name: Extract Generated Videos
         if: always()
@@ -80,7 +71,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: stateside-smiles-shorts-videos
+          name: stateside-smiles-regular-videos
           path: ./output_videos/generated/
           retention-days: 7
 

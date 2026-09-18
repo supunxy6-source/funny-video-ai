@@ -52,10 +52,11 @@ class ThumbnailGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     async def generate_variants(
-        self, topic: str, title: str, num_variants: int = NUM_VARIANTS
+        self, topic: str, title: str, num_variants: int = NUM_VARIANTS, video_format: str = "shorts"
     ) -> list[dict]:
         """Generate multiple thumbnail variants and score them."""
         variants = []
+        target_aspect = "16:9" if video_format == "regular" else "9:16"
 
         for i in range(num_variants):
             prompt_suffix = [
@@ -67,10 +68,10 @@ class ThumbnailGenerator:
             if i < len(prompt_suffix):
                 prompt += f"\nStyle variation: {prompt_suffix[i]}"
 
-            # Generate base image
+            # Generate base image with format-appropriate aspect ratio
             image_path = await self.image_gen.generate_image(
                 prompt=prompt,
-                aspect_ratio="9:16",
+                aspect_ratio=target_aspect,
                 title=title,
                 search_keywords=topic,
             )
@@ -80,7 +81,7 @@ class ThumbnailGenerator:
                 badge_style = BADGE_STYLES[i % len(BADGE_STYLES)]
                 
                 # Add aggressive text overlay with badges
-                final_path = self._add_text_overlay(image_path, title, badge_style)
+                final_path = self._add_text_overlay(image_path, title, badge_style, video_format=video_format)
                 if final_path:
                     # Score the thumbnail with enhanced heuristic
                     score = self._predict_ctr(title, i, badge_style)
@@ -94,7 +95,7 @@ class ThumbnailGenerator:
         variants.sort(key=lambda x: x["predicted_ctr"], reverse=True)
 
         logger.info(
-            f"🖼️ Generated {len(variants)} thumbnail variants "
+            f"🖼️ Generated {len(variants)} thumbnail variants ({target_aspect}) "
             f"(best CTR: {variants[0]['predicted_ctr']:.3f})"
             if variants else "No thumbnails generated"
         )
@@ -102,14 +103,18 @@ class ThumbnailGenerator:
         return variants
 
     def _add_text_overlay(
-        self, image_path: str, title: str, badge_style: dict = None
+        self, image_path: str, title: str, badge_style: dict = None, video_format: str = "shorts"
     ) -> Optional[str]:
-        """Add high-CTR text overlay with urgency badges to a vertical thumbnail image."""
+        """Add high-CTR text overlay with urgency badges to thumbnail image."""
         try:
             import textwrap
 
+            is_regular = video_format == "regular"
+            thumb_w = 1920 if is_regular else THUMB_WIDTH
+            thumb_h = 1080 if is_regular else THUMB_HEIGHT
+
             img = Image.open(image_path).convert("RGB")
-            img = img.resize((THUMB_WIDTH, THUMB_HEIGHT), Image.LANCZOS)
+            img = img.resize((thumb_w, thumb_h), Image.LANCZOS)
 
             # Use a bold system font (fallback to default)
             font_names = [
@@ -135,17 +140,18 @@ class ThumbnailGenerator:
                 font_small = font
 
             # === DARK VIGNETTE OVERLAY (draws eye to center) ===
-            vignette = Image.new("RGBA", (THUMB_WIDTH, THUMB_HEIGHT), (0, 0, 0, 0))
+            vignette = Image.new("RGBA", (thumb_w, thumb_h), (0, 0, 0, 0))
             vignette_draw = ImageDraw.Draw(vignette)
             # Top vignette
-            for y in range(0, 300):
-                alpha = int(120 * (1 - y / 300))
-                vignette_draw.line([(0, y), (THUMB_WIDTH, y)], fill=(0, 0, 0, alpha))
+            top_vig = 180 if is_regular else 300
+            for y in range(0, top_vig):
+                alpha = int(120 * (1 - y / top_vig))
+                vignette_draw.line([(0, y), (thumb_w, y)], fill=(0, 0, 0, alpha))
             # Bottom heavy gradient overlay
-            gradient_start = THUMB_HEIGHT - 750
-            for y in range(gradient_start, THUMB_HEIGHT):
-                alpha = int(230 * (y - gradient_start) / (THUMB_HEIGHT - gradient_start))
-                vignette_draw.line([(0, y), (THUMB_WIDTH, y)], fill=(0, 0, 0, alpha))
+            gradient_start = thumb_h - (450 if is_regular else 750)
+            for y in range(gradient_start, thumb_h):
+                alpha = int(230 * (y - gradient_start) / (thumb_h - gradient_start))
+                vignette_draw.line([(0, y), (thumb_w, y)], fill=(0, 0, 0, alpha))
 
             img = img.convert("RGBA")
             img = Image.alpha_composite(img, vignette)
@@ -156,10 +162,10 @@ class ThumbnailGenerator:
                 badge_text = badge_style["text"]
                 badge_bg = badge_style["bg"]
                 badge_border = badge_style["border"]
-                badge_y = 120
+                badge_y = 40 if is_regular else 120
                 badge_w = 420
                 badge_h = 65
-                badge_x = (THUMB_WIDTH - badge_w) // 2
+                badge_x = (thumb_w - badge_w) // 2
                 
                 # Badge shadow
                 draw.rounded_rectangle(
@@ -173,7 +179,7 @@ class ThumbnailGenerator:
                 )
                 # Badge text
                 draw.text(
-                    (THUMB_WIDTH // 2, badge_y + 14),
+                    (thumb_w // 2, badge_y + 14),
                     badge_text, font=font_badge, fill=(255, 255, 255, 255), anchor="mt"
                 )
 
@@ -182,29 +188,32 @@ class ThumbnailGenerator:
             # Remove #Shorts from thumbnail text (visual noise)
             clean_title = clean_title.replace("#Shorts", "").replace("#shorts", "").strip()
             
-            lines = textwrap.wrap(clean_title, width=16)[:4]  # Fewer chars per line = bigger text
-            start_y = THUMB_HEIGHT - 520
+            wrap_width = 28 if is_regular else 16
+            lines = textwrap.wrap(clean_title, width=wrap_width)[:(3 if is_regular else 4)]
+            start_y = thumb_h - (320 if is_regular else 520)
+            line_spacing = 95 if is_regular else 120
             for i, line in enumerate(lines):
-                cur_y = start_y + i * 120  # More line spacing
+                cur_y = start_y + i * line_spacing
                 # Heavy text stroke outline for readability
                 draw.text(
-                    (THUMB_WIDTH // 2, cur_y),
+                    (thumb_w // 2, cur_y),
                     line,
                     font=font,
                     fill=(255, 255, 255, 255),
-                    stroke_width=8,  # Thicker stroke
+                    stroke_width=8,
                     stroke_fill=(0, 0, 0, 255),
                     anchor="mt",
                 )
 
             # === BOTTOM ENGAGEMENT BAR ===
-            bar_y = THUMB_HEIGHT - 100
+            bar_y = thumb_h - (70 if is_regular else 100)
+            bar_h = 45 if is_regular else 55
             draw.rounded_rectangle(
-                [(40, bar_y), (THUMB_WIDTH - 40, bar_y + 55)],
+                [(40, bar_y), (thumb_w - 40, bar_y + bar_h)],
                 radius=12, fill=(0, 0, 0, 180)
             )
             draw.text(
-                (THUMB_WIDTH // 2, bar_y + 10),
+                (thumb_w // 2, bar_y + 8),
                 "😂 STATESIDE SMILES • DAILY LAUGHS",
                 font=font_small, fill=(255, 255, 255, 220), anchor="mt"
             )
@@ -308,9 +317,12 @@ async def generate_thumbnails(video_id: int) -> int:
         if not script:
             raise ValueError(f"Script {video.script_id} not found")
 
+        video_format = getattr(script, "video_format", "shorts") or "shorts"
+
         variants = await generator.generate_variants(
             topic=script.topic_summary,
             title=script.title,
+            video_format=video_format,
         )
 
         if not variants:
