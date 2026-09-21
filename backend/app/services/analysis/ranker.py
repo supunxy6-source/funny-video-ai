@@ -156,6 +156,14 @@ class StoryRanker:
         # 6. NEW: Viral potential score
         viral_score = self._score_viral_potential(articles)
 
+        # None-safe guards
+        source_count_score = source_count_score if source_count_score is not None else 0.0
+        avg_trust_score = avg_trust_score if avg_trust_score is not None else 0.5
+        recency_score = recency_score if recency_score is not None else 0.5
+        category_score = category_score if category_score is not None else 0.5
+        coverage_score = coverage_score if coverage_score is not None else 0.5
+        viral_score = viral_score if viral_score is not None else 0.0
+
         # Weighted total
         total = (
             WEIGHTS["source_count"] * source_count_score
@@ -246,6 +254,9 @@ class StoryRanker:
         # Number presence in headlines (numbers boost engagement)
         if any(re.search(r'\d', a.get("headline", "")) for a in articles):
             score += 0.05
+        
+        return min(max(score, 0.0), 1.0)
+
         
 # Stop words for title deduplication
 DEDUP_STOP_WORDS = {
