@@ -247,7 +247,63 @@ class StoryRanker:
         if any(re.search(r'\d', a.get("headline", "")) for a in articles):
             score += 0.05
         
-        return min(max(score, 0.0), 1.0)
+# Stop words for title deduplication
+DEDUP_STOP_WORDS = {
+    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of",
+    "with", "by", "from", "up", "about", "into", "over", "after", "is", "are",
+    "was", "were", "be", "been", "being", "have", "has", "had", "do", "does",
+    "did", "will", "would", "shall", "should", "may", "might", "must", "can",
+    "could", "this", "that", "these", "those", "what", "which", "who", "when",
+    "where", "why", "how", "all", "any", "both", "each", "few", "more", "most",
+    "other", "some", "such", "shorts", "video", "funny", "memes", "comedy",
+}
+
+
+def _clean_title_for_dedup(text: str) -> str:
+    """Normalize title for fuzzy comparison."""
+    if not text:
+        return ""
+    t = re.sub(r'#shorts\b', '', text, flags=re.IGNORECASE)
+    t = re.sub(r'[^\w\s]', ' ', t.lower())
+    return " ".join(t.split())
+
+
+def is_duplicate_topic(candidate_text: str, used_titles: set[str]) -> bool:
+    """
+    Check if candidate story is a duplicate of any previously used title.
+    Uses:
+    1. Exact normalized match
+    2. Substring containment
+    3. Keyword / token overlap (>= 50% keyword similarity)
+    """
+    cand_clean = _clean_title_for_dedup(candidate_text)
+    if not cand_clean or len(cand_clean) < 5:
+        return False
+
+    cand_words = {w for w in cand_clean.split() if len(w) >= 3 and w not in DEDUP_STOP_WORDS}
+
+    for ut in used_titles:
+        ut_clean = _clean_title_for_dedup(ut)
+        if not ut_clean or len(ut_clean) < 5:
+            continue
+
+        # 1. Exact match
+        if cand_clean == ut_clean:
+            return True
+
+        # 2. Substring match
+        if len(cand_clean) >= 12 and (cand_clean in ut_clean or ut_clean in cand_clean):
+            return True
+
+        # 3. Word token overlap
+        ut_words = {w for w in ut_clean.split() if len(w) >= 3 and w not in DEDUP_STOP_WORDS}
+        if len(cand_words) >= 3 and len(ut_words) >= 3:
+            overlap = len(cand_words & ut_words)
+            min_len = min(len(cand_words), len(ut_words))
+            if min_len > 0 and (overlap / min_len) >= 0.50:
+                return True
+
+    return False
 
 
 async def rank_stories() -> list[dict]:
@@ -256,12 +312,13 @@ async def rank_stories() -> list[dict]:
     Ranks all story clusters and returns them sorted by score.
     Strictly filters out:
     1. Clusters whose articles have already been turned into a Script (deduplication)
-    2. Clusters containing banned policy keywords (safety filter)
+    2. Clusters matching any previously published YouTube video (persistent cross-run dedup)
+    3. Clusters containing banned policy keywords (safety filter)
     """
     ranker = StoryRanker()
 
     async with async_session_factory() as db:
-        # Step A: Collect all article IDs and titles already used in generated scripts
+        # Step A: Collect all article IDs and titles already used in generated scripts (local DB)
         script_res = await db.execute(select(Script.article_ids, Script.title, Script.topic_summary))
         used_article_ids = set()
         used_titles = set()
@@ -279,6 +336,19 @@ async def rank_stories() -> list[dict]:
                 used_titles.add(title.strip().lower())
             if topic_summary:
                 used_titles.add(topic_summary.strip().lower())
+
+        # Step A2: Also fetch already uploaded video titles directly from YouTube channel!
+        # This provides persistent deduplication even on ephemeral CI/CD runners (e.g. GitHub Actions)
+        try:
+            from app.services.youtube.auth import get_recent_uploaded_titles
+            yt_titles = get_recent_uploaded_titles(limit=50)
+            for yt_t in yt_titles:
+                if yt_t:
+                    used_titles.add(yt_t.strip().lower())
+            if yt_titles:
+                logger.info(f"📺 Ingested {len(yt_titles)} live YouTube titles for persistent deduplication")
+        except Exception as yt_err:
+            logger.debug(f"YouTube title dedup fetch skipped: {yt_err}")
 
         # Step B: Get all unique cluster IDs
         result = await db.execute(
@@ -305,14 +375,18 @@ async def rank_stories() -> list[dict]:
             )
             articles = articles_result.scalars().all()
 
-            # DEDUPLICATION: Skip cluster if any article in it has already been used in a Script
+            # DEDUPLICATION 1: Skip cluster if any article in it has already been used in a Script
             if any(a.id in used_article_ids for a in articles):
                 continue
 
-            # DEDUPLICATION: Skip cluster if top headline matches any previously generated script
-            top_h = (articles[0].headline or "").strip().lower() if articles else ""
-            if top_h and any(top_h in ut or ut in top_h for ut in used_titles if len(ut) > 8):
-                logger.info(f"🔄 Skipping duplicate story cluster matching existing script: '{top_h[:50]}'")
+            # DEDUPLICATION 2: Skip cluster if top headline or summary matches any existing script or YouTube video
+            top_h = (articles[0].headline or "").strip() if articles else ""
+            top_s = (articles[0].summary or "").strip() if articles else ""
+            if top_h and is_duplicate_topic(top_h, used_titles):
+                logger.info(f"🔄 Skipping duplicate story cluster (headline match): '{top_h[:60]}'")
+                continue
+            if top_s and is_duplicate_topic(top_s[:100], used_titles):
+                logger.info(f"🔄 Skipping duplicate story cluster (summary match): '{top_s[:60]}'")
                 continue
 
             article_dicts = [

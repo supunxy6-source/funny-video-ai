@@ -186,6 +186,45 @@ def authenticate_interactive() -> Credentials:
     return creds
 
 
+def get_recent_uploaded_titles(limit: int = 50) -> list[str]:
+    """
+    Fetch titles of the most recently uploaded videos on the authenticated YouTube channel.
+    Used for persistent deduplication across ephemeral CI/CD environments (e.g. GitHub Actions).
+    """
+    try:
+        from googleapiclient.discovery import build
+
+        creds = get_youtube_credentials()
+        youtube = build("youtube", "v3", credentials=creds)
+
+        # 1. Get uploads playlist ID
+        resp = youtube.channels().list(part="contentDetails", mine=True).execute()
+        items = resp.get("items", [])
+        if not items:
+            return []
+
+        uploads_id = items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
+        # 2. Fetch recent videos from the uploads playlist (max 50)
+        p_res = youtube.playlistItems().list(
+            playlistId=uploads_id,
+            part="snippet",
+            maxResults=min(limit, 50),
+        ).execute()
+
+        titles = []
+        for it in p_res.get("items", []):
+            t = it.get("snippet", {}).get("title", "")
+            if t:
+                titles.append(t.strip())
+
+        logger.info(f"📺 Retrieved {len(titles)} recent video titles from YouTube channel for deduplication")
+        return titles
+    except Exception as e:
+        logger.warning(f"Could not retrieve recent YouTube titles: {e}")
+        return []
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     try:

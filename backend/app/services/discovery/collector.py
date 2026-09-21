@@ -296,10 +296,26 @@ async def run_entertainment_discovery() -> list[dict]:
             default_source_id = sources_cache.get("stateside smiles")
 
             from app.models.script import Script
+            from app.services.analysis.ranker import is_duplicate_topic
+
+            # Fetch already uploaded YouTube video titles for persistent dedup
+            uploaded_titles = set()
+            try:
+                from app.services.youtube.auth import get_recent_uploaded_titles
+                for ut in get_recent_uploaded_titles(limit=50):
+                    if ut:
+                        uploaded_titles.add(ut.strip().lower())
+            except Exception as e:
+                logger.debug(f"Could not load YouTube titles at discovery: {e}")
 
             for item in all_content:
                 item_title = item.get("title", "").strip()
                 if not item_title:
+                    continue
+
+                # Skip if already uploaded to YouTube
+                if uploaded_titles and is_duplicate_topic(item_title, uploaded_titles):
+                    logger.info(f"🔄 Discovery skipping topic matching live YouTube video: '{item_title[:50]}'")
                     continue
 
                 # Check for duplicates by title/URL in NewsArticle

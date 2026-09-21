@@ -373,7 +373,6 @@ class SEOOptimizer:
             if content_mode == "entertainment":
                 desc = (
                     f"{clean_title}\n\n"
-                    f"{topic}\n\n"
                     f"😂 Daily comedy, viral memes & funny stories!\n\n"
                     f"👉 Subscribe to Stateside Smiles for daily laughs: https://youtube.com/@Smiles-x4g?sub_confirmation=1\n\n"
                     f"💬 Which part made you laugh the hardest? Drop your comment below! 👇\n\n"
@@ -588,8 +587,13 @@ def format_shorts_title(raw_title: str, max_base_len: int = 70) -> str:
     else:
         safe_base = _truncate_at_word_boundary(clean_no_tag, max_base_len)
 
-    # Avoid ending on incomplete filler words (e.g. 'is', 'and', 'the', 'if', 'wa', 'in', 'of')
-    bad_endings = {"is", "and", "or", "the", "a", "an", "if", "to", "for", "in", "on", "at", "by", "with", "that", "this", "wa", "of"}
+    # Avoid ending on incomplete filler words, prepositions, conjunctions, or hanging verbs
+    bad_endings = {
+        "is", "and", "or", "the", "a", "an", "if", "to", "for", "in", "on", "at", "by",
+        "with", "that", "this", "wa", "of", "could", "would", "should", "can", "will",
+        "avoid", "make", "get", "take", "do", "have", "had", "has", "like", "want", "need",
+        "about", "from", "when", "where", "why", "how", "because", "so", "than", "as", "their", "his", "her"
+    }
     words = safe_base.split()
     while words and words[-1].lower() in bad_endings:
         words.pop()
