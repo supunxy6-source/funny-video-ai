@@ -56,6 +56,25 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=2, minute=0),
         "options": {"queue": "default"},
     },
+
+    # Catch-up pipeline — runs 2h after each scheduled batch to verify
+    # videos were actually published. If zero videos went out, triggers
+    # an emergency batch to prevent zero-upload days (algorithmic death).
+    "pipeline-catchup": {
+        "task": "app.tasks.pipeline.run_catchup_pipeline",
+        "schedule": crontab(hour="13,20", minute=0),
+        "options": {"queue": "default"},
+    },
+
+    # First-hour comment engagement — interact with viewer comments
+    # on recently uploaded videos. YouTube's 2026 algorithm heavily
+    # weights creator engagement in the first hour after upload.
+    # Runs every 30 minutes during US waking hours (7 AM - 11 PM UTC).
+    "comment-engagement": {
+        "task": "app.tasks.pipeline.engage_recent_uploads",
+        "schedule": crontab(minute="*/30", hour="7-23"),
+        "options": {"queue": "default"},
+    },
 }
 
 # ── Conditional: Regular (Long-Form) Video Pipeline ────────

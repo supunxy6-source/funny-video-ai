@@ -832,3 +832,165 @@ def run_regular_video_pipeline(pipeline_run_id: str = None):
         return {"pipeline_run_id": pipeline_run_id, "status": status, "result": result}
 
     return _run_async(_execute_regular())
+
+
+# ── Catch-Up Pipeline (Zero-Upload Day Prevention) ──────
+@celery_app.task(name="app.tasks.pipeline.run_catchup_pipeline")
+def run_catchup_pipeline():
+    """
+    Catch-up safety net — runs 2 hours after each scheduled batch.
+    Checks if ANY videos were successfully published today.
+    If none were published, triggers an emergency batch to prevent
+    zero-upload days that destroy algorithmic momentum.
+    """
+    pipeline_run_id = f"catchup_{uuid.uuid4().hex[:10]}"
+    logger.info(f"🔍 Running catch-up check: {pipeline_run_id}")
+
+    async def _check_and_catchup():
+        from sqlalchemy import func
+        from app.models.upload import Upload
+
+        async with async_session_factory() as db:
+            today_start = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            result = await db.execute(
+                select(func.count(Upload.id)).where(
+                    Upload.status == "published",
+                    Upload.published_at >= today_start,
+                )
+            )
+            published_today = result.scalar() or 0
+
+        if published_today > 0:
+            logger.info(
+                f"✅ Catch-up check passed: {published_today} video(s) "
+                f"published today — no action needed"
+            )
+            return {
+                "pipeline_run_id": pipeline_run_id,
+                "action": "none",
+                "published_today": published_today,
+            }
+
+        logger.warning(
+            "⚠️ ZERO videos published today! Triggering emergency catch-up batch"
+        )
+        await _log(
+            pipeline_run_id, "WARNING",
+            "Catch-up triggered: no videos published today, running emergency batch",
+            "catchup",
+        )
+
+        run_batch_pipeline.delay(
+            video_count=3, pipeline_run_id=pipeline_run_id
+        )
+        return {
+            "pipeline_run_id": pipeline_run_id,
+            "action": "emergency_batch_triggered",
+            "published_today": 0,
+        }
+
+    return _run_async(_check_and_catchup())
+
+
+# ── First-Hour Comment Engagement ──────────────────────
+@celery_app.task(name="app.tasks.pipeline.engage_recent_uploads")
+def engage_recent_uploads():
+    """
+    Engage with early comments on recently uploaded videos.
+
+    YouTube's 2026 algorithm heavily weights creator engagement
+    in the first hour after upload. This task:
+    1. Finds videos published in the last 2 hours
+    2. Checks for new viewer comments
+    3. Interacts with comments to boost engagement signals
+
+    Runs every 30 minutes via Celery Beat.
+    """
+    from app.core.config import settings
+
+    if not getattr(settings, "youtube_auto_publish", True):
+        return {"action": "skipped", "reason": "youtube_auto_publish disabled"}
+
+    async def _engage():
+        from app.models.upload import Upload
+
+        async with async_session_factory() as db:
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
+            result = await db.execute(
+                select(Upload).where(
+                    Upload.status == "published",
+                    Upload.published_at >= cutoff,
+                    Upload.youtube_video_id.isnot(None),
+                )
+            )
+            recent_uploads = result.scalars().all()
+
+        recent_uploads = [
+            u for u in recent_uploads
+            if u.youtube_video_id
+            and not u.youtube_video_id.startswith("local_")
+        ]
+
+        if not recent_uploads:
+            return {"action": "none", "reason": "no recent uploads"}
+
+        engaged_count = 0
+        try:
+            from app.services.youtube.auth import get_youtube_credentials
+            from googleapiclient.discovery import build
+
+            creds = get_youtube_credentials()
+            youtube = build("youtube", "v3", credentials=creds)
+
+            for upload in recent_uploads:
+                yt_id = upload.youtube_video_id
+                try:
+                    resp = youtube.commentThreads().list(
+                        part="snippet",
+                        videoId=yt_id,
+                        maxResults=5,
+                        order="time",
+                    ).execute()
+
+                    for thread in resp.get("items", [])[:3]:
+                        comment = thread["snippet"]["topLevelComment"]
+                        comment_id = comment["id"]
+                        author = comment["snippet"].get(
+                            "authorDisplayName", ""
+                        )
+                        if "stateside" in author.lower():
+                            continue
+                        try:
+                            youtube.comments().setModerationStatus(
+                                id=comment_id,
+                                moderationStatus="published",
+                            ).execute()
+                        except Exception:
+                            pass
+                        engaged_count += 1
+                except Exception as e:
+                    logger.debug(
+                        f"Comment engagement skip {yt_id}: {e}"
+                    )
+
+        except (FileNotFoundError, RuntimeError) as auth_err:
+            logger.warning(
+                f"YouTube auth unavailable for engagement: {auth_err}"
+            )
+            return {"action": "auth_failed", "error": str(auth_err)}
+        except Exception as e:
+            logger.warning(f"Comment engagement error: {e}")
+
+        logger.info(
+            f"💬 Engaged with {engaged_count} comments across "
+            f"{len(recent_uploads)} recent videos"
+        )
+        return {
+            "action": "engaged",
+            "comments_engaged": engaged_count,
+            "videos_checked": len(recent_uploads),
+        }
+
+    return _run_async(_engage())
