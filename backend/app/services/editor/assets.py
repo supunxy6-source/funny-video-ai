@@ -174,7 +174,7 @@ SUBSCRIBE_OVERLAY_CONFIG = {
     "position_y_offset": 200,      # From bottom
     "padding_x": 36,
     "padding_y": 12,
-    "duration": 1.8,               # Shorter = less intrusive, higher completion
+    "duration": 0.8,               # Ultra-brief flash — viewers register but don't get interrupted
     "fade_in": 0.2,
     "placement": "mid_video",       # 'mid_video' = 40-60%, 'end' = last N seconds
     "mid_video_ratio": 0.5,        # Show at 50% of total duration

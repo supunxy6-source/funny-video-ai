@@ -276,7 +276,7 @@ class SEOOptimizer:
                     topic=topic,
                     script_title=script_title,
                 )
-            response = await self.llm.generate(prompt, max_tokens=200, temperature=0.9)
+            response = await self.llm.generate(prompt, max_tokens=300, temperature=1.1)
             
             # Parse multiple title variants from the response
             variants = [
@@ -300,7 +300,7 @@ class SEOOptimizer:
             # Score each variant and pick the best
             best_title = cleaned_variants[0]
             best_score = -1
-            for variant in cleaned_variants[:5]:  # Cap at 5 to avoid runaway
+            for variant in cleaned_variants[:8]:  # More variants = better title selection
                 score = _score_title_ctr(variant)
                 logger.debug(f"Title variant CTR score: {score:.3f} — '{variant[:60]}'")
                 if score > best_score:

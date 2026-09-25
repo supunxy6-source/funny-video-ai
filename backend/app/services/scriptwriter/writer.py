@@ -319,6 +319,18 @@ class ScriptWriter:
         # Select prompt and system persona based on style & content
         meme_style = getattr(settings, "meme_style", "story")
         shorts_duration_mode = getattr(settings, "shorts_duration_mode", "micro")
+
+        # Mixed mode: rotate content styles for variety (prevents audience fatigue)
+        if meme_style == "mixed":
+            import random
+            # Story mode is the proven performer, so weight it heavily
+            meme_style = random.choices(
+                ["story", "compilation", "voiceover"],
+                weights=[70, 15, 15],
+                k=1,
+            )[0]
+            logger.info(f"🎲 Mixed mode selected style: {meme_style}")
+
         is_story_mode = (meme_style == "story" or content_type == "story")
 
         if video_format == "regular":

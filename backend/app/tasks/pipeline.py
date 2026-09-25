@@ -627,7 +627,7 @@ def run_batch_pipeline(video_count: int = None, pipeline_run_id: str = None):
     """
     from app.core.config import settings
     count = video_count or getattr(settings, "daily_video_count", 3)
-    count = max(1, min(int(count), 3))  # Strictly clamp to 3 videos maximum per run
+    count = max(1, min(int(count), 5))  # Allow up to 5 videos per batch run
 
     pipeline_run_id = pipeline_run_id or f"batch_{uuid.uuid4().hex[:10]}"
     logger.info(f"🚀 Starting batch pipeline ({count} videos target): {pipeline_run_id}")
@@ -717,10 +717,10 @@ def run_full_pipeline(video_count: int = None, pipeline_run_id: str = None):
     """
     from app.core.config import settings
     target_count = video_count or getattr(settings, "daily_video_count", 3)
-    target_count = max(1, min(int(target_count), 3))
+    target_count = max(1, min(int(target_count), 5))
 
     if target_count > 1:
-        # Run batch pipeline for up to 3 videos
+        # Run batch pipeline for up to 5 videos
         pipeline_run_id = pipeline_run_id or f"batch_{uuid.uuid4().hex[:10]}"
         run_batch_pipeline.delay(video_count=target_count, pipeline_run_id=pipeline_run_id)
         return pipeline_run_id
@@ -834,64 +834,49 @@ def run_regular_video_pipeline(pipeline_run_id: str = None):
     return _run_async(_execute_regular())
 
 
-# ── Catch-Up Pipeline (Zero-Upload Day Prevention) ──────
+# ── Catchup Pipeline (Failure Recovery) ─────────────────
 @celery_app.task(name="app.tasks.pipeline.run_catchup_pipeline")
 def run_catchup_pipeline():
     """
-    Catch-up safety net — runs 2 hours after each scheduled batch.
-    Checks if ANY videos were successfully published today.
-    If none were published, triggers an emergency batch to prevent
-    zero-upload days that destroy algorithmic momentum.
+    Check if today's expected Shorts uploads actually happened.
+    If fewer videos were uploaded than expected, trigger a rescue batch
+    to fill the gap. Prevents zero-upload days from killing momentum.
     """
+    from app.core.config import settings
+    from app.models.upload import Upload
+
     pipeline_run_id = f"catchup_{uuid.uuid4().hex[:10]}"
-    logger.info(f"🔍 Running catch-up check: {pipeline_run_id}")
+    expected_per_batch = getattr(settings, "daily_video_count", 4)
+    schedule_hours_raw = getattr(settings, "pipeline_schedule_hours", "")
+    num_batches = len([h for h in str(schedule_hours_raw).split(",") if h.strip()]) if schedule_hours_raw else 1
+    expected_daily = expected_per_batch * num_batches
 
-    async def _check_and_catchup():
-        from sqlalchemy import func
-        from app.models.upload import Upload
-
+    async def _execute_catchup():
         async with async_session_factory() as db:
-            today_start = datetime.now(timezone.utc).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
+            # Count uploads from today
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
             result = await db.execute(
-                select(func.count(Upload.id)).where(
-                    Upload.status == "published",
-                    Upload.published_at >= today_start,
+                select(Upload).where(
+                    Upload.created_at >= today_start,
+                    Upload.youtube_video_id.isnot(None),
                 )
             )
-            published_today = result.scalar() or 0
+            today_uploads = len(result.scalars().all())
 
-        if published_today > 0:
-            logger.info(
-                f"✅ Catch-up check passed: {published_today} video(s) "
-                f"published today — no action needed"
-            )
-            return {
-                "pipeline_run_id": pipeline_run_id,
-                "action": "none",
-                "published_today": published_today,
-            }
+        if today_uploads >= expected_daily:
+            logger.info(f"✅ Catchup check: {today_uploads}/{expected_daily} uploads today — no action needed")
+            return {"pipeline_run_id": pipeline_run_id, "status": "sufficient", "today_uploads": today_uploads}
 
-        logger.warning(
-            "⚠️ ZERO videos published today! Triggering emergency catch-up batch"
-        )
-        await _log(
-            pipeline_run_id, "WARNING",
-            "Catch-up triggered: no videos published today, running emergency batch",
-            "catchup",
-        )
+        gap = min(expected_per_batch, expected_daily - today_uploads)
+        logger.warning(f"⚠️ Catchup triggered: only {today_uploads}/{expected_daily} uploads today — producing {gap} rescue videos")
 
-        run_batch_pipeline.delay(
-            video_count=3, pipeline_run_id=pipeline_run_id
-        )
-        return {
-            "pipeline_run_id": pipeline_run_id,
-            "action": "emergency_batch_triggered",
-            "published_today": 0,
-        }
+        await _log(pipeline_run_id, "WARNING", f"Catchup: {today_uploads}/{expected_daily} uploads today, producing {gap} rescue videos", "catchup")
 
-    return _run_async(_check_and_catchup())
+        run_batch_pipeline.delay(video_count=gap, pipeline_run_id=pipeline_run_id)
+        return {"pipeline_run_id": pipeline_run_id, "status": "catchup_triggered", "gap": gap, "today_uploads": today_uploads}
+
+    return _run_async(_execute_catchup())
+
 
 
 # ── First-Hour Comment Engagement ──────────────────────

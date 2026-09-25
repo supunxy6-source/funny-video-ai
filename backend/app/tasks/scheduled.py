@@ -29,7 +29,7 @@ def _get_schedule_hours():
     return str(settings.pipeline_schedule_hour)
 
 celery_app.conf.beat_schedule = {
-    # Automated daily batch video production pipeline (produces 3 to 5 comedy videos per day & publishes to YouTube)
+    # Automated daily batch video production pipeline (produces 4 comedy videos per batch × 3 batches & publishes to YouTube)
     "daily-pipeline": {
         "task": "app.tasks.pipeline.run_full_pipeline",
         "schedule": crontab(
@@ -58,11 +58,11 @@ celery_app.conf.beat_schedule = {
     },
 
     # Catch-up pipeline — runs 2h after each scheduled batch to verify
-    # videos were actually published. If zero videos went out, triggers
-    # an emergency batch to prevent zero-upload days (algorithmic death).
+    # videos were actually published. If upload count is below target,
+    # triggers a rescue batch to fill the gap.
     "pipeline-catchup": {
         "task": "app.tasks.pipeline.run_catchup_pipeline",
-        "schedule": crontab(hour="13,20", minute=0),
+        "schedule": crontab(hour="3,13,20", minute=0),
         "options": {"queue": "default"},
     },
 
