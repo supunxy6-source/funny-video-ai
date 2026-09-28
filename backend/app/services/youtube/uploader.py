@@ -167,42 +167,44 @@ class YouTubeUploader:
             logger.error(f"❌ Failed to add to playlist: {e}")
             return False
 
-    def add_comment(self, video_id: str, comment_text: str) -> bool:
-        """Add a pinned comment to a YouTube video.
+    def add_comment(self, video_id: str, comment_text: str, max_retries: int = 4, initial_delay: int = 5) -> bool:
+        """Add an engagement comment to a YouTube video with retry backoff.
         
         Early comments with engagement questions boost algorithmic ranking.
+        Retries handle YouTube's post-upload processing latency where commentThreads
+        initially returns 404 or comments disabled.
         """
-        try:
-            result = self.youtube.commentThreads().insert(
-                part="snippet",
-                body={
-                    "snippet": {
-                        "videoId": video_id,
-                        "topLevelComment": {
-                            "snippet": {
-                                "textOriginal": comment_text,
-                            }
-                        },
-                    }
-                },
-            ).execute()
-            
-            # Try to pin the comment for maximum visibility
-            comment_id = result.get("snippet", {}).get("topLevelComment", {}).get("id")
-            if comment_id:
-                try:
-                    self.youtube.comments().setModerationStatus(
-                        id=comment_id,
-                        moderationStatus="published",
-                    ).execute()
-                except Exception:
-                    pass  # Pinning may not be available for all channels
-            
-            logger.info(f"✅ Engagement comment added to video {video_id}")
-            return True
-        except Exception as e:
-            logger.error(f"❌ Failed to add comment: {e}")
-            return False
+        for attempt in range(1, max_retries + 1):
+            try:
+                if attempt > 1:
+                    wait_time = initial_delay * attempt
+                    logger.info(f"⏳ Waiting {wait_time}s before comment attempt {attempt}/{max_retries}...")
+                    time.sleep(wait_time)
+                elif initial_delay > 0:
+                    time.sleep(initial_delay)
+
+                result = self.youtube.commentThreads().insert(
+                    part="snippet",
+                    body={
+                        "snippet": {
+                            "videoId": video_id,
+                            "topLevelComment": {
+                                "snippet": {
+                                    "textOriginal": comment_text,
+                                }
+                            },
+                        }
+                    },
+                ).execute()
+                
+                logger.info(f"✅ Engagement comment added to video {video_id} on attempt {attempt}")
+                return True
+            except Exception as e:
+                logger.warning(f"⚠️ Comment attempt {attempt}/{max_retries} failed for video {video_id}: {e}")
+                if attempt == max_retries:
+                    logger.error(f"❌ Failed to add comment to {video_id} after {max_retries} attempts: {e}")
+                    return False
+        return False
 
     def check_processing_status(self, video_id: str) -> str:
         """Check the processing status of an uploaded video."""
@@ -305,8 +307,8 @@ async def upload_to_youtube(upload_id: int) -> str:
                 mode = getattr(settings, "content_mode", "entertainment")
                 if mode == "entertainment":
                     pinned_text = (
-                        "😂 Which part made you laugh the most? Drop your comment below! 👇\n\n"
-                        "❤️ LIKE if this made your day better\n"
+                        "🔥 Quick debate: Drop 1 if you agree, or 2 if you don't! 👇\n\n"
+                        "❤️ LIKE if this made you smile\n"
                         "🔔 Subscribe to Stateside Smiles for daily viral laughs!"
                     )
                 else:
@@ -315,7 +317,7 @@ async def upload_to_youtube(upload_id: int) -> str:
                         "❤️ Like if you learned something new\n"
                         "🔔 Follow for daily 30-second news updates"
                     )
-            uploader.add_comment(yt_video_id, pinned_text)
+            uploader.add_comment(yt_video_id, pinned_text, max_retries=4, initial_delay=5)
 
             # Update final status
             upload.status = "published"

@@ -163,8 +163,11 @@ You engineer every short for the 2026 YouTube Shorts algorithm to achieve 90%+ R
      * Complete loop heard by viewer: "...And that is the exact reason why you should never trust a glass floor."
    - When executed properly, viewers watch 3-5 seconds into the second loop before realizing it repeated, boosting retention to 110%-140%!
 
-5. NO INTRO, NO OUTRO, NO CTA WASTE:
-   - Never say "Subscribe", "Like the video", or "Follow for more". Every single second is pure content.
+5. NO AUDIO CTA WASTE (USE VISUAL ENGAGEMENT OVERLAYS INSTEAD):
+   - Never say "Subscribe", "Like the video", or "Follow for more" in spoken narration. Every single second of spoken audio is pure story.
+   - Instead, drive engagement through VISUAL text overlays:
+     * Scene 2: Use interactive dilemma/debate overlays ("1 or 2? 👇", "Who was wrong? 💀", "Would you do this? 👇") to trigger comments.
+     * Scene 3: Use subtle reaction/relatability overlays ("Tap ❤️ if you relate", "Stateside Smiles 😄") to drive likes and brand recognition.
    - Wholesome, clever, relatable humor only—never hateful or derogatory.
 """
 
@@ -207,7 +210,7 @@ STRUCTURE (Output as JSON):
             "text": "Rapid escalation of the funny situation + early dilemma/debate question at the 5-7 second mark to prevent swipe-away. (25-35 words, 10-14 seconds)",
             "visual_prompt": "Dynamic fast-paced funny situation B-roll video directly matching the comical twist, vertical 9:16 composition, energetic movement every 1.5s",
             "visual_type": "video",
-            "text_overlay": "Story-specific suspense hook under 5 words (e.g. 'Wait till you see this 💀', 'Then it got worse 😭', 'Bro had NO idea 💀'). BANNED: 'Wait for it...'"
+            "text_overlay": "Interactive debate/curiosity hook under 6 words (e.g. '1 or 2? Drop below 👇', 'Who is at fault? 💀', 'Would you do this? 😭'). BANNED: 'Wait for it...'"
         }},
         {{
             "order": 3,
@@ -216,7 +219,7 @@ STRUCTURE (Output as JSON):
             "text": "The hilarious punchline, ending with an incomplete phrase that grammatically leads into Scene 1. No goodbye, no subscribe. (12-18 words, 4-7 seconds)",
             "visual_prompt": "Hilarious reaction reveal video directly matching the punchline, vertical 9:16, comical comedic timing visual",
             "visual_type": "video",
-            "text_overlay": ""
+            "text_overlay": "Engagement or brand watermark under 5 words (e.g. 'Tap ❤️ if you felt this', 'Stateside Smiles 😄')"
         }}
     ]
 }}
