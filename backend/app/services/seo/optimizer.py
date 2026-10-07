@@ -573,7 +573,8 @@ def format_shorts_title(raw_title: str, max_base_len: int = 70) -> str:
     
     Ensures:
     - Sensitive/policy-flagged words are sanitized
-    - Never abruptly cuts off mid-sentence or on trailing prepositions/conjunctions
+    - Never abruptly cuts off mid-sentence or on trailing prepositions/conjunctions/pronouns
+    - Prevents broken 2-word fragments like 'Did you #Shorts'
     - Appends '#Shorts'
     """
     clean = _sanitize_seo_title(raw_title)
@@ -582,22 +583,45 @@ def format_shorts_title(raw_title: str, max_base_len: int = 70) -> str:
     clean_no_tag = re.sub(r'#shorts\b', '', clean, flags=re.IGNORECASE).strip()
     clean_no_tag = clean_no_tag.rstrip(",.-:;?! ")
     
+    # If already within length, use it directly
     if len(clean_no_tag) <= max_base_len:
         safe_base = clean_no_tag
     else:
-        safe_base = _truncate_at_word_boundary(clean_no_tag, max_base_len)
+        # Check if title has natural separator clauses (e.g. "Hook: Setup" or "Punchline — Extra")
+        clause_match = re.split(r'\s*[:—–|]\s*', clean_no_tag)
+        if len(clause_match) > 1:
+            first_clause = clause_match[0].strip()
+            if 20 <= len(first_clause) <= max_base_len and len(first_clause.split()) >= 3:
+                safe_base = first_clause
+            else:
+                safe_base = _truncate_at_word_boundary(clean_no_tag, max_base_len)
+        else:
+            safe_base = _truncate_at_word_boundary(clean_no_tag, max_base_len)
 
-    # Avoid ending on incomplete filler words, prepositions, conjunctions, or hanging verbs
+    # Avoid ending on incomplete filler words, prepositions, conjunctions, pronouns, or hanging verbs
     bad_endings = {
         "is", "and", "or", "the", "a", "an", "if", "to", "for", "in", "on", "at", "by",
-        "with", "that", "this", "wa", "of", "could", "would", "should", "can", "will",
+        "with", "that", "this", "was", "were", "of", "could", "would", "should", "can", "will",
         "avoid", "make", "get", "take", "do", "have", "had", "has", "like", "want", "need",
-        "about", "from", "when", "where", "why", "how", "because", "so", "than", "as", "their", "his", "her"
+        "about", "from", "when", "where", "why", "how", "because", "so", "than", "as", "their", "his", "her",
+        "still", "been", "being", "am", "are", "be", "just", "even", "my", "your", "our", "its",
+        "did", "you", "he", "she", "they", "we", "i", "me", "us", "him", "them", "it",
+        "into", "onto", "up", "out", "off", "over", "under", "who", "which", "what",
     }
     words = safe_base.split()
     while words and words[-1].lower() in bad_endings:
         words.pop()
+
     safe_base = " ".join(words) if words else clean_no_tag[:max_base_len]
+
+    # Guard against broken/empty short fragments like "Did you" or "What a"
+    if len(words) < 3 or len(safe_base) < 16:
+        # If trimming ruined the title, try the first 45 chars of clean_no_tag or a punchy hook
+        fallback = _truncate_at_word_boundary(clean_no_tag, 45)
+        if len(fallback.split()) >= 3 and len(fallback) >= 16:
+            safe_base = fallback
+        else:
+            safe_base = f"{clean_no_tag[:40]} 💀" if len(clean_no_tag) >= 10 else "Wait Till The End 💀"
 
     return f"{safe_base} #Shorts"
 
@@ -674,14 +698,17 @@ def _score_title_ctr(title: str) -> float:
             score -= 0.05
             break
 
-    # Penalty for truncated/chopped trailing word (e.g., 'wa' instead of 'walk')
+    # Severe penalty for truncated/chopped trailing word (e.g., 'wa' instead of 'walk')
     title_without_shorts = re.sub(r'#shorts\b', '', title, flags=re.IGNORECASE).strip()
     words = title_without_shorts.split()
+    if len(words) < 3 or len(title_without_shorts) < 16:
+        return 0.0  # Disqualify incomplete fragments like "Did you" or "What a"
+
     if words:
         last_word = words[-1].strip(".,!?:;\"'()[]")
         common_short_words = {"a", "i", "in", "on", "to", "at", "no", "he", "it", "so", "up", "do", "my", "we", "by", "is", "or", "an"}
         if len(last_word) <= 2 and last_word.lower() not in common_short_words:
-            score -= 0.25  # Severe penalty for truncated word fragment
+            score -= 0.35  # Severe penalty for truncated word fragment
     
     return min(max(score, 0.1), 1.0)
 

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Default comedy & narrative subreddits to scrape
 # Prioritize STORY-HEAVY subs that produce narration-friendly Shorts content.
-# Image-only subs (r/funny, r/memes) removed — they don't translate to narrated Shorts.
+# Image-only subs (r/funny, r/memes, r/wholesomememes, r/MadeMeSmile) removed — they don't translate to narrated Shorts.
 DEFAULT_SUBREDDITS = [
     # Tier 1: Best for narrated comedy Shorts (conflict-driven stories)
     "pettyrevenge", "ProRevenge", "nuclearrevenge",
@@ -34,8 +34,6 @@ DEFAULT_SUBREDDITS = [
     # Tier 2: Good story/joke content
     "EntitledParents", "confession", "AskReddit",
     "dadjokes", "jokes",
-    # Tier 3: Wholesome/feel-good (variety)
-    "wholesomememes", "MadeMeSmile",
 ]
 
 # Subreddits that require substantial body text for good narration
@@ -472,6 +470,14 @@ class RedditScraper:
         selftext = data.get("selftext", "").strip()
         if len(selftext) > 2000:
             selftext = selftext[:2000]
+
+        # Require minimum story body text:
+        # Avoid image-only / photo-only posts with empty body text (e.g., 'Some random car outside a restaurant')
+        # Narrative Shorts require actual story or punchline content to narrate.
+        sub_lower = subreddit.lower()
+        if len(selftext) < 80 and sub_lower not in ["jokes", "dadjokes", "cleanjokes"]:
+            logger.debug(f"Skipping post with no/minimal body text ({len(selftext)} chars): '{title[:50]}'")
+            return None
 
         # Post age (prefer fresh content)
         created_utc = data.get("created_utc", 0)

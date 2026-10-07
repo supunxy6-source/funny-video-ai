@@ -113,32 +113,54 @@ async def fetch_google_trends(limit: int = 20, geo: str = "US") -> list[dict]:
     return results
 
 
+# Words that immediately disqualify a trend from being comedy (sports, matches, politics, tragedies)
+EXCLUDED_TREND_KEYWORDS = {
+    # Sports matches, leagues, teams, tournaments
+    "vs", "v.", "versus", "score", "scores", "match", "cup", "league", "fc", "cf",
+    "championship", "tournament", "qualifier", "playoff", "finals", "stadium", "fifa",
+    "uefa", "nfl", "nba", "mlb", "nhl", "premier league", "conmebol", "concacaf", "mls",
+    "quarterback", "touchdown", "goal", "goalkeeper", "soccer", "football", "basketball",
+    "baseball", "cricket", "rugby", "tennis",
+    # Serious news, politics, tragedies
+    "election", "senate", "congress", "president", "court", "trial", "verdict",
+    "shooting", "crash", "explosion", "killed", "dead", "death", "war", "strike",
+    "earthquake", "hurricane", "tsunami", "hostage", "arrested", "murder", "casualty",
+    # Finance & business
+    "stock", "shares", "nasdaq", "dow", "inflation", "interest rate",
+}
+
+COMEDY_KEYWORDS = {
+    "funny", "meme", "viral", "challenge", "fail", "win", "epic",
+    "weird", "bizarre", "crazy", "wild", "hilarious", "lol",
+    "drama", "react", "caught", "exposed", "prank", "humor",
+    "unhinged", "absurd", "awkward", "blooper", "parody",
+}
+
+
 def filter_comedy_trends(trends: list[dict]) -> list[dict]:
     """
-    Filter trending topics to find ones with comedy/entertainment potential.
+    Filter trending topics to find ones with genuine comedy/entertainment potential.
 
-    Uses keyword matching to identify trends that could be turned into
-    funny content (celebrity drama, weird news, viral challenges, etc).
+    Strictly excludes sports matches (e.g., 'guatemala vs suriname'), politics,
+    and tragedies, ensuring only funny/viral topics make it to the video pipeline.
     """
-    comedy_keywords = {
-        "funny", "meme", "viral", "challenge", "fail", "win", "epic",
-        "weird", "bizarre", "crazy", "wild", "hilarious", "lol",
-        "trend", "celebrity", "drama", "react", "caught", "exposed",
-        "best", "worst", "top", "ranking", "vs", "debate",
-        "game", "movie", "show", "music", "tiktok", "instagram",
-    }
-
     filtered = []
     for trend in trends:
-        title_lower = trend.get("title", "").lower()
-        # Check if any comedy keyword is in the title
-        has_comedy_angle = any(kw in title_lower for kw in comedy_keywords)
-        # High-traffic topics are inherently interesting
-        high_traffic = trend.get("traffic_volume", 0) > 50000
+        title = trend.get("title", "")
+        title_lower = title.lower()
+        title_words = set(re.findall(r'\b[a-zA-Z]+\b', title_lower))
 
-        if has_comedy_angle or high_traffic:
-            if has_comedy_angle:
-                trend["virality_score"] = trend.get("virality_score", 0) + 30
+        # 1. Reject if ANY excluded keyword matches as a whole word
+        if any(bad_word in title_words for bad_word in EXCLUDED_TREND_KEYWORDS):
+            logger.debug(f"Rejecting non-comedy trend '{title}': matched exclusion")
+            continue
+
+        # 2. Require an explicit comedy/entertainment angle
+        has_comedy_angle = any(kw in title_lower for kw in COMEDY_KEYWORDS)
+
+        # 3. Only keep trends that have a verified comedy angle
+        if has_comedy_angle:
+            trend["virality_score"] = trend.get("virality_score", 0) + 30
             filtered.append(trend)
 
     return filtered

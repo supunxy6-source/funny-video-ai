@@ -22,8 +22,8 @@ SERIES_THEMES = {
         "emoji": "🏆",
         "subreddits": ["pettyrevenge", "prorevenge", "nuclearrevenge"],
         "hook_templates": [
-            "Welcome to another entry in the Petty Revenge Hall of Fame...",
-            "This one just earned a spot in the Petty Revenge Hall of Fame...",
+            "...he stole my parking spot, so I ended his career 💀",
+            "...she tried to get me fired, so I played her own game 💀",
         ],
         "hashtag": "#PettyRevengeHallOfFame",
         "tags": ["petty revenge stories", "best revenge stories", "revenge compilation", "petty revenge hall of fame"],
@@ -33,8 +33,8 @@ SERIES_THEMES = {
         "emoji": "⚖️",
         "subreddits": ["amitheasshole"],
         "hook_templates": [
-            "Time for another Am I The Villain...",
-            "You be the judge on this one...",
+            "...everyone says I was wrong, but wait till you hear this 💀",
+            "...was this totally justified or did I take it too far? 👇",
         ],
         "hashtag": "#AmITheVillain",
         "tags": ["am i the villain", "aita stories", "reddit aita", "who was wrong"],
@@ -44,8 +44,8 @@ SERIES_THEMES = {
         "emoji": "💼",
         "subreddits": ["maliciouscompliance", "idontworkherelady", "choosingbeggars", "entitledparents"],
         "hook_templates": [
-            "Another tale from the trenches...",
-            "You will not believe this one from the trenches...",
+            "...the customer demanded the manager, so I became the manager 💀",
+            "...boss told me to follow the rules, so I obeyed EVERY word 💀",
         ],
         "hashtag": "#TalesFromTheTrenches",
         "tags": ["work stories", "malicious compliance", "entitled people", "customer stories", "tales from the trenches"],
@@ -55,8 +55,8 @@ SERIES_THEMES = {
         "emoji": "🔥",
         "subreddits": ["tifu", "confession"],
         "hook_templates": [
-            "The internet really outdid itself with this one...",
-            "This is peak unhinged internet...",
+            "...nobody warned me about this until it was too late 💀",
+            "...I still cannot believe this actually happened in real life 💀",
         ],
         "hashtag": "#InternetsUnhingedMoments",
         "tags": ["tifu stories", "internet stories", "unhinged moments", "reddit confessions"],
@@ -66,8 +66,8 @@ SERIES_THEMES = {
         "emoji": "😂",
         "subreddits": ["dadjokes", "jokes"],
         "hook_templates": [
-            "Entering the Dad Joke Danger Zone...",
-            "Brace yourself for this one...",
+            "...I bet you cannot hear this without cracking a smile 😂",
+            "...this joke had no business being this funny 😂",
         ],
         "hashtag": "#DadJokeDangerZone",
         "tags": ["dad jokes", "best jokes", "funny jokes", "dad joke danger zone"],
@@ -77,8 +77,8 @@ SERIES_THEMES = {
         "emoji": "😄",
         "subreddits": ["wholesomememes", "mademesmile"],
         "hook_templates": [
-            "This one genuinely made my entire day...",
-            "You need to see this right now...",
+            "...this one genuinely restored my faith in humanity ❤️",
+            "...you will not regret watching this until the end ❤️",
         ],
         "hashtag": "#MadeMyDay",
         "tags": ["wholesome stories", "made my day", "wholesome memes", "feel good stories"],
@@ -88,8 +88,8 @@ SERIES_THEMES = {
         "emoji": "💎",
         "subreddits": ["askreddit"],
         "hook_templates": [
-            "AskReddit just dropped absolute gold...",
-            "Someone asked the internet this and the answers are wild...",
+            "...someone asked this question and the top answer is unhinged 💀",
+            "...the internet came together just to answer this one thing 💀",
         ],
         "hashtag": "#AskRedditGold",
         "tags": ["askreddit stories", "best of askreddit", "reddit answers", "askreddit gold"],
@@ -562,18 +562,20 @@ Topic: {topic}
 Script Title: {script_title}
 
 VIRAL COMEDY TITLE FORMULAS (2026 FOR YOUTUBE SHORTS):
-- STRICTLY under 65 characters and must be a COMPLETE, coherent sentence or phrase.
+- LENGTH RULE (CRITICAL): STRICTLY between 30 and 50 characters (4 to 8 words).
+- Must be a 100% COMPLETE, punchy sentence or phrase with NO hanging prepositions, cut-offs, or ellipsis.
+- Do NOT write long titles — titles over 50 chars get cut off with '...' on mobile screens and kill views.
 - Do NOT add #Shorts — the system appends it automatically.
 - STRICT SAFETY RULES (MANDATORY):
   * NEVER use words related to murder, killing, death, blood, violence, self-harm, sexual content/slang, or illegal acts.
   * Every title must be advertiser-friendly and 100% compliant with YouTube Community Guidelines.
 - Use ONE of these proven high-CTR curiosity formulas:
   * CURIOSITY GAP: "Wait till the end... instant regret 😭", "He really thought nobody was looking 💀"
-  * RELATABLE DISBELIEF: "The disrespect is completely out of hand 😂", "Tag someone who needs this immediately 💀"
-  * WITTY OBSERVATION: "My last two braincells trying their best 😭", "Bro took this way too seriously 💀"
-  * HYPERBOLE / SURPRISE: "He really built a car with TWO front ends 💀🚗", "The one place you should NEVER enter 💀"
+  * RELATABLE DISBELIEF: "The disrespect is out of control 😂", "Tag someone who needs this immediately 💀"
+  * WITTY OBSERVATION: "My last two braincells trying hard 😭", "Bro took this way too seriously 💀"
+  * HYPERBOLE / SURPRISE: "He built a car with two front ends 💀", "The one place you should never enter 💀"
 - Include at least ONE power word or emotional reaction emoji (😂, 💀, 😭, 🤣).
-- NEVER use generic phrases like "Funny Video" or cut off mid-sentence.
+- NEVER use generic phrases like "Funny Video" or incomplete fragments like "Did you".
 
 Respond with ONLY 3 title variants, one per line, nothing else."""
 
