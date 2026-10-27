@@ -566,18 +566,30 @@ VIRAL COMEDY TITLE FORMULAS (2026 FOR YOUTUBE SHORTS):
 - Must be a 100% COMPLETE, punchy sentence or phrase with NO hanging prepositions, cut-offs, or ellipsis.
 - Do NOT write long titles — titles over 50 chars get cut off with '...' on mobile screens and kill views.
 - Do NOT add #Shorts — the system appends it automatically.
+
+- SPECIFICITY RULE (CRITICAL — THIS IS THE #1 CTR DRIVER):
+  * Every title MUST contain at least ONE concrete noun, proper noun, or number.
+  * Concrete = something the viewer can picture (a car, police, a toddler, a whoopee cushion, $10,000).
+  * NEVER use titles that are ONLY vague pronouns + adjectives with no concrete anchor.
+  * Real channel data proves this:
+    ❌ BAD (0.67% CTR): "Which genius came up with this?" — no concrete image, no reason to click
+    ❌ BAD (0.65% CTR): "Roasting a guy with no arms" — better but still needs sharper framing
+    ✅ GOOD (5.56% CTR): "Austrian police do lost-and-found" — specific, visual, unexpected
+    ✅ GOOD (1.73% CTR): "What's crazy is that it works" — implies a specific thing that works
+
 - STRICT SAFETY RULES (MANDATORY):
   * NEVER use words related to murder, killing, death, blood, violence, self-harm, sexual content/slang, or illegal acts.
   * Every title must be advertiser-friendly and 100% compliant with YouTube Community Guidelines.
-- Use ONE of these proven high-CTR curiosity formulas:
-  * CURIOSITY GAP: "Wait till the end... instant regret 😭", "He really thought nobody was looking 💀"
-  * RELATABLE DISBELIEF: "The disrespect is out of control 😂", "Tag someone who needs this immediately 💀"
-  * WITTY OBSERVATION: "My last two braincells trying hard 😭", "Bro took this way too seriously 💀"
-  * HYPERBOLE / SURPRISE: "He built a car with two front ends 💀", "The one place you should never enter 💀"
+- Use ONE of these proven high-CTR curiosity formulas (BUT always with a concrete anchor):
+  * SPECIFIC SCENARIO: "He built a car with two front ends 💀", "She called the cops on herself 😂"
+  * CONCRETE DISBELIEF: "A 10-foot whoopee cushion actually works 💀", "Thai insurance ads hit different 😭"
+  * PROPER NOUN + TWIST: "Austrian police found something unexpected 💀", "Florida man outdid himself again 😂"
+  * NUMBER + SURPRISE: "3 seconds changed everything 💀", "He waited 2 years for this revenge 😂"
 - Include at least ONE power word or emotional reaction emoji (😂, 💀, 😭, 🤣).
 - NEVER use generic phrases like "Funny Video" or incomplete fragments like "Did you".
 
 Respond with ONLY 3 title variants, one per line, nothing else."""
+
 
 ENTERTAINMENT_SEO_DESCRIPTION_PROMPT = """Generate a YouTube description for this comedy video.
 

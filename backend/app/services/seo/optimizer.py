@@ -262,7 +262,9 @@ class SEOOptimizer:
     async def _generate_title(self, topic: str, script_title: str) -> str:
         """Generate an SEO-optimized video title.
         
-        Now generates 3 variants and picks the one with the highest CTR score.
+        Generates 3 variants, scores them for CTR + specificity,
+        and picks the best. If the best title is too vague (score < 0.55),
+        regenerates with a "sharpen this title" pass.
         """
         content_mode = getattr(settings, "content_mode", "entertainment")
         try:
@@ -308,6 +310,35 @@ class SEOOptimizer:
                     best_title = variant
             
             logger.info(f"🏆 Best title (CTR={best_score:.3f}): '{best_title[:60]}'")
+            
+            # ── Specificity quality gate ──
+            # If the best title scores below threshold, it's likely vague.
+            # Try a second "sharpen" pass with the LLM.
+            if best_score < 0.55 and content_mode == "entertainment":
+                logger.info(f"⚠️ Title scored {best_score:.3f} (below 0.55) — triggering specificity refinement")
+                try:
+                    sharpen_prompt = (
+                        f"This YouTube Shorts title is too VAGUE and will get low click-through rate:\n"
+                        f"Title: \"{best_title}\"\n"
+                        f"Topic: {topic}\n\n"
+                        f"REWRITE it to be SPECIFIC. Add a concrete noun, a number, or a specific scenario.\n"
+                        f"Examples of BAD → GOOD rewrites:\n"
+                        f"  BAD: 'Which genius came up with this?' → GOOD: 'He built a car with two front ends 💀'\n"
+                        f"  BAD: 'Wait till the end' → GOOD: 'She called the cops on herself 😂'\n"
+                        f"  BAD: 'Nobody expected this' → GOOD: 'Austrian police do lost-and-found 💀'\n\n"
+                        f"Output ONLY the improved title (under 50 chars), nothing else."
+                    )
+                    refined = await self.llm.generate(sharpen_prompt, max_tokens=80, temperature=0.9)
+                    refined = refined.strip().strip('"\'')
+                    refined = re.sub(r'^[\d]+[.)]\s*', '', refined).strip()
+                    if refined and len(refined) > 8 and not refined.startswith("{"):
+                        refined_score = _score_title_ctr(refined)
+                        if refined_score > best_score:
+                            logger.info(f"✅ Refined title (CTR={refined_score:.3f}): '{refined[:60]}'")
+                            best_title = refined
+                            best_score = refined_score
+                except Exception as refine_err:
+                    logger.debug(f"Title refinement skipped: {refine_err}")
             
             # If the LLM accidentally returned JSON, try to parse it
             if best_title.startswith("{"):
@@ -636,6 +667,7 @@ def _score_title_ctr(title: str) -> float:
     - Question marks (curiosity gap)
     - Emotional triggers
     - #Shorts tag presence
+    - SPECIFICITY: concrete nouns/scenarios beat vague curiosity
     - Severe penalty for incomplete/chopped trailing words
     """
     score = 0.5
@@ -685,6 +717,45 @@ def _score_title_ctr(title: str) -> float:
     # #Shorts tag present
     if "#shorts" in title_lower:
         score += 0.05
+    
+    # ── SPECIFICITY SCORING (NEW) ──
+    # Titles with concrete nouns/scenarios get 5.56% CTR ("Austrian police do lost-and-found")
+    # Vague titles get 0.67% CTR ("Which genius came up with this?")
+    # Penalize titles that are all pronouns/vague words with no concrete anchor
+    vague_only_patterns = [
+        r'^(who|what|which|how|why|when|where|this|that|these|nobody|someone|something|everybody|anyone|everyone)\b',
+    ]
+    vague_filler_words = {
+        "this", "that", "these", "those", "something", "someone", "nobody",
+        "everybody", "anyone", "everyone", "thing", "stuff", "it",
+        "ever", "never", "always", "just", "really", "actually",
+        "genius", "insane", "crazy", "wild", "came", "with",
+    }
+    title_words_clean = re.sub(r'#\w+', '', title_lower)  # Remove hashtags
+    title_words_clean = re.sub(r'[^a-z0-9\s]', '', title_words_clean)  # Remove emoji/punctuation
+    content_words = [w for w in title_words_clean.split() if len(w) > 2]
+    
+    if content_words:
+        vague_ratio = sum(1 for w in content_words if w in vague_filler_words) / len(content_words)
+        if vague_ratio > 0.7:
+            # Title is almost entirely vague words — severe penalty
+            score -= 0.20
+            logger.debug(f"Specificity penalty: {vague_ratio:.0%} vague words in '{title[:50]}'")
+        elif vague_ratio > 0.5:
+            score -= 0.10
+        
+        # Bonus: title contains a proper noun (capitalized word that isn't start of sentence)
+        title_no_shorts = re.sub(r'#\w+', '', title).strip()
+        title_content_words = title_no_shorts.split()
+        if len(title_content_words) > 1:
+            # Check for proper nouns (capitalized words after position 0)
+            has_proper_noun = any(
+                w[0].isupper() and w.lower() not in vague_filler_words and len(w) > 2
+                for w in title_content_words[1:]
+                if w and w[0].isalpha()
+            )
+            if has_proper_noun:
+                score += 0.08  # Proper nouns create concrete mental images
     
     # Penalty: ALL CAPS (looks spammy)
     caps_ratio = sum(1 for c in title if c.isupper()) / max(len(title), 1)
