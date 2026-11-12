@@ -877,10 +877,10 @@ def validate_hook(scene_text: str) -> dict:
             issues.append(f"Starts with weak phrase: '{pattern.strip()}'")
             break
 
-    # Check 2: Too long (hook should be under 12 words for 1.5-second delivery)
+    # Check 2: Too long (hook should be under 8 words for 1-1.5 second delivery)
     word_count = len(text.split())
-    if word_count > 15:
-        issues.append(f"Hook is {word_count} words (max 12 for 1.5s delivery)")
+    if word_count > 10:
+        issues.append(f"Hook is {word_count} words (max 8 for rapid scroll-stopping delivery)")
 
     # Check 3: Missing engagement trigger (optional but informative)
     has_trigger = any(word in text_lower for word in HOOK_TRIGGER_WORDS)

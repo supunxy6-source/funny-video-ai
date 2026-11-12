@@ -43,6 +43,7 @@ from app.services.editor.assets import (
     COLORS,
     FONTS,
     FONT_SIZES,
+    HOOK_FRAME_CONFIG,
     INTRO_DURATION,
     OUTRO_DURATION,
     SERIES_PILL_CONFIG,
@@ -125,7 +126,7 @@ class VideoCompositor:
         if audio_path and os.path.exists(audio_path):
             try:
                 audio = AudioFileClip(audio_path)
-                duration = max(2.5, audio.duration)
+                duration = audio.duration + 0.1  # Tight trim — no dead air padding
             except Exception as e:
                 logger.warning(f"Could not load audio duration for {audio_path}: {e}")
 
@@ -190,12 +191,18 @@ class VideoCompositor:
                 fallback_card = self._create_scene_fallback_card(title or source_text, duration)
                 layers.append(fallback_card)
 
-        # Text overlay hook (e.g., "Wait for this next part...")
-        # These are proven retention boosters — pattern interrupts that prevent swiping
+        # Text overlay hook — pattern interrupts that prevent swiping
+        # Scene 1 gets a larger, bolder "hook frame" overlay at t=0 to stop the scroll
         if text_overlay and text_overlay.strip():
-            overlay_clip = self._create_text_overlay_hook(text_overlay, duration)
-            if overlay_clip:
-                layers.append(overlay_clip)
+            if order == 1:
+                # Scene 1: Large bold hook frame overlay visible at thumbnail size
+                hook_frame = self._create_hook_frame_overlay(text_overlay, duration)
+                if hook_frame:
+                    layers.append(hook_frame)
+            else:
+                overlay_clip = self._create_text_overlay_hook(text_overlay, duration)
+                if overlay_clip:
+                    layers.append(overlay_clip)
 
         # Burned-in kinetic captions from the scene narration text
         # 79% of top Shorts use on-screen captions — muted viewers stay
@@ -359,6 +366,94 @@ class VideoCompositor:
             .with_position(("center", pos_y))
             .with_start(start_time)
             .with_duration(min(show_duration, scene_duration - start_time))
+        )
+
+    def _create_hook_frame_overlay(self, text: str, scene_duration: float) -> Optional[ImageClip]:
+        """Create a large, bold scroll-stopper text overlay for Scene 1.
+
+        This appears at t=0 (frame 0) with a vivid red background,
+        designed to be visible even at thumbnail size in the Shorts feed.
+        The goal is to stop the viewer's scroll before their thumb
+        completes the swipe gesture (~0.3s decision window).
+        """
+        from PIL import Image, ImageDraw
+
+        clean_text = text.strip()
+        if not clean_text:
+            return None
+
+        config = HOOK_FRAME_CONFIG
+        font = self._get_font(config.get("font_size", 80), bold=True)
+        pad_x = config.get("padding_x", 40)
+        pad_y = config.get("padding_y", 20)
+
+        # Measure text size
+        dummy_img = Image.new("RGBA", (1, 1))
+        dummy_draw = ImageDraw.Draw(dummy_img)
+        try:
+            # Word-wrap if text is too wide
+            import textwrap
+            max_chars = 18  # Short lines for large font
+            wrapped_lines = textwrap.wrap(clean_text, width=max_chars)
+            if not wrapped_lines:
+                wrapped_lines = [clean_text]
+
+            line_height = config.get("font_size", 80) + 10
+            max_line_w = 0
+            for line in wrapped_lines:
+                bbox = dummy_draw.textbbox((0, 0), line, font=font)
+                line_w = bbox[2] - bbox[0]
+                max_line_w = max(max_line_w, line_w)
+            text_h = line_height * len(wrapped_lines)
+        except Exception:
+            max_line_w, text_h = 500, 90
+            wrapped_lines = [clean_text]
+
+        # Create pill-shaped overlay
+        overlay_w = max_line_w + pad_x * 2
+        overlay_h = text_h + pad_y * 2
+        overlay_w = min(overlay_w, self.width - 60)
+
+        overlay_img = Image.new("RGBA", (overlay_w, overlay_h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay_img)
+
+        # Parse bg color
+        bg_hex = config.get("bg_color", "#FF1744DD")
+        bg_rgb = self._hex_to_rgb(bg_hex[:7])
+        bg_alpha = int(bg_hex[7:9], 16) if len(bg_hex) > 7 else 220
+
+        border_radius = config.get("border_radius", 20)
+        draw.rounded_rectangle(
+            [(0, 0), (overlay_w, overlay_h)],
+            radius=border_radius,
+            fill=(*bg_rgb, bg_alpha),
+        )
+
+        # Render each line centered
+        for i, line in enumerate(wrapped_lines):
+            y_pos = pad_y + i * line_height
+            draw.text(
+                (overlay_w // 2, y_pos + line_height // 2),
+                line,
+                font=font,
+                fill=(255, 255, 255, 255),
+                anchor="mm",
+                stroke_width=3,
+                stroke_fill=(0, 0, 0, 200),
+            )
+
+        overlay_path = self.temp_dir / f"hook_frame_{uuid.uuid4().hex}.png"
+        overlay_img.save(str(overlay_path), "PNG")
+
+        pos_y = config.get("position_y", 350)
+        hook_duration = config.get("duration", 1.5)
+        start_time = config.get("start_time", 0.0)
+
+        return (
+            ImageClip(str(overlay_path))
+            .with_position(("center", pos_y))
+            .with_start(start_time)
+            .with_duration(min(hook_duration, scene_duration))
         )
 
     def _create_subscribe_overlay(self, total_duration: float, series_name: str = None) -> Optional[ImageClip]:
@@ -678,9 +773,9 @@ async def compose_video(script_id: int) -> int:
             text_overlay = ""
             if hasattr(scene, "text_overlay") and scene.text_overlay:
                 text_overlay = scene.text_overlay
-            elif scene.scene_type == "escalation" or scene.scene_type == "narration":
-                # Auto-generate a retention hook for middle scenes
-                text_overlay = "👀 Watch what happens next..."
+            # No generic fallback — only use LLM-generated story-specific overlays
+            # (generic "Watch what happens next..." overrides the debate hooks
+            #  the LLM generates, which are proven better for engagement)
 
             scene_clip = compositor.create_scene_clip(
                 video_path=scene.video_url or "",

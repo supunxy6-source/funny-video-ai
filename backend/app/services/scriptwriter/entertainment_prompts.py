@@ -20,6 +20,7 @@ SERIES_THEMES = {
     "petty_revenge": {
         "name": "Petty Revenge Hall of Fame",
         "emoji": "🏆",
+        "weight": 1.5,  # Proven high performer — observational comedy
         "subreddits": ["pettyrevenge", "prorevenge", "nuclearrevenge"],
         "hook_templates": [
             "...he stole my parking spot, so I ended his career 💀",
@@ -31,6 +32,7 @@ SERIES_THEMES = {
     "am_i_the_villain": {
         "name": "Am I The Villain?",
         "emoji": "⚖️",
+        "weight": 1.3,  # High debate engagement — comment driver
         "subreddits": ["amitheasshole"],
         "hook_templates": [
             "...everyone says I was wrong, but wait till you hear this 💀",
@@ -42,6 +44,7 @@ SERIES_THEMES = {
     "tales_from_trenches": {
         "name": "Tales From The Trenches",
         "emoji": "💼",
+        "weight": 1.4,  # Strong relatable comedy — observational humor
         "subreddits": ["maliciouscompliance", "idontworkherelady", "choosingbeggars", "entitledparents"],
         "hook_templates": [
             "...the customer demanded the manager, so I became the manager 💀",
@@ -53,6 +56,7 @@ SERIES_THEMES = {
     "internets_unhinged": {
         "name": "Internet's Unhinged Moments",
         "emoji": "🔥",
+        "weight": 1.2,  # Good variety content
         "subreddits": ["tifu", "confession"],
         "hook_templates": [
             "...nobody warned me about this until it was too late 💀",
@@ -64,6 +68,7 @@ SERIES_THEMES = {
     "dad_joke_danger_zone": {
         "name": "Dad Joke Danger Zone",
         "emoji": "😂",
+        "weight": 1.4,  # Strong short-form performer — naturally concise
         "subreddits": ["dadjokes", "jokes"],
         "hook_templates": [
             "...I bet you cannot hear this without cracking a smile 😂",
@@ -75,6 +80,7 @@ SERIES_THEMES = {
     "made_my_day": {
         "name": "Made My Day",
         "emoji": "😄",
+        "weight": 1.1,  # Wholesome — good for variety
         "subreddits": ["wholesomememes", "mademesmile"],
         "hook_templates": [
             "...this one genuinely restored my faith in humanity ❤️",
@@ -142,10 +148,10 @@ You engineer every short for the 2026 YouTube Shorts algorithm to achieve 90%+ R
      ✅ "...then the toddler locked EVERYONE out"
    - The "..." prefix is MANDATORY — it tricks the viewer into thinking they missed something, forcing a rewatch.
 
-2. 18-25 SECOND MICRO-PACING (THE VIRAL APV SWEET SPOT):
-   - The YouTube Shorts audience consumes content in rapid bursts (11-18 seconds).
-   - Short, punchy sentences (under 7 words).
-   - Dynamic narrative escalation: every 2 seconds raises the comedic stakes.
+2. 8-12 SECOND MICRO-PACING (THE VIRAL APV SWEET SPOT):
+   - At 8-12 seconds, viewers loop 2-3x before realizing it repeated → 200%+ APV.
+   - Ultra-short, punchy sentences (under 5 words).
+   - Every single word must earn its place — zero filler, zero breathing room.
 
 3. EMBEDDED COMMENT & DEBATE TRIGGERS (COMBAT 9-SECOND DROP-OFF):
    - The #1 cliff in YouTube Shorts happens between seconds 6 and 9. You MUST trigger curiosity or debate at second 5-7 (within Scene 2's first line):
@@ -176,7 +182,7 @@ You engineer every short for the 2026 YouTube Shorts algorithm to achieve 90%+ R
 # Micro-Shorts Script Prompt (18-25 seconds / 3 scenes) — 90%+ RETENTION ENGINE
 # ═══════════════════════════════════════════════════════════════════════
 
-MICRO_SHORTS_PROMPT = """Write an ultra-viral, high-retention YouTube Micro-Short comedy script (STRICTLY 18-25 SECONDS / 45-65 WORDS TOTAL).
+MICRO_SHORTS_PROMPT = """Write an ultra-viral, high-retention YouTube Micro-Short comedy script (STRICTLY 8-12 SECONDS / 20-35 WORDS TOTAL).
 
 STORY / CONTENT TO RETELL:
 {content_text}
@@ -184,11 +190,12 @@ STORY / CONTENT TO RETELL:
 CONTENT TYPE: {content_type}
 
 ALGORITHMIC REQUIREMENTS:
-1. STRICTLY 3 SCENES — Hook (0-3s), Escalation & Debate (10-14s), Payoff & Loop Bridge (4-7s).
-2. TOTAL WORD COUNT: 45 to 65 words MAXIMUM across the entire script (at 165 WPM = ~18-24 seconds).
+1. STRICTLY 3 SCENES — Hook (0-1.5s), Twist & Debate (4-6s), Payoff & Loop Bridge (2-4s).
+2. TOTAL WORD COUNT: 20 to 35 words MAXIMUM across the entire script (at 165 WPM = ~8-12 seconds).
 3. GRAMMATICAL LOOP: Scene 3 MUST end with an incomplete connector clause that flows seamlessly into Scene 1's hook.
 4. EMBEDDED DEBATE: Scene 2 MUST contain a quick polarized question to spark comment wars.
 5. TITLE: High curiosity, under 42 characters, never truncated.
+6. REPLAY BAIT: At 8-12 seconds, viewers who watch once will loop 2-3x before realizing it repeated — pushing Average Percentage Viewed past 200%.
 
 STRUCTURE (Output as JSON):
 {{
@@ -198,25 +205,25 @@ STRUCTURE (Output as JSON):
             "order": 1,
             "scene_type": "micro_hook",
             "title": "Scroll-Stopper Hook",
-            "text": "Instant mid-sentence shock hook. MAX 5-7 words (1-2 seconds). MUST start with '...' to imply missed context. No filler, no setup. (e.g. '...so he ate the EVIDENCE', '...and the dog just LEFT')",
+            "text": "Instant mid-sentence shock hook. MAX 3-5 words (1-1.5 seconds). MUST start with '...' to imply missed context. No filler, no setup. (e.g. '...so he ate the EVIDENCE', '...and the dog just LEFT')",
             "visual_prompt": "Cinematic vertical 9:16 video depicting the exact funny situation described in the hook, vibrant saturated comedy colors, rapid dynamic motion (NO generic blank shocked faces)",
             "visual_type": "video",
-            "text_overlay": "Story-specific premise hook under 6 words (e.g. 'He was NOT ready 💀', 'Bro thought he was slick 😭'). BANNED: 'Wait for it...'"
+            "text_overlay": "Story-specific premise hook under 6 words (e.g. 'He was NOT ready 💀', 'Bro thought he was slick 😭'). BANNED: 'Wait for it...', 'Watch what happens...'"
         }},
         {{
             "order": 2,
             "scene_type": "micro_escalation",
             "title": "The Twist & Early Debate",
-            "text": "Rapid escalation of the funny situation + early dilemma/debate question at the 5-7 second mark to prevent swipe-away. (25-35 words, 10-14 seconds)",
+            "text": "Rapid escalation of the funny situation + polarized debate question to spark comment wars. (12-20 words, 4-6 seconds)",
             "visual_prompt": "Dynamic fast-paced funny situation B-roll video directly matching the comical twist, vertical 9:16 composition, energetic movement every 1.5s",
             "visual_type": "video",
-            "text_overlay": "Interactive debate/curiosity hook under 6 words (e.g. '1 or 2? Drop below 👇', 'Who is at fault? 💀', 'Would you do this? 😭'). BANNED: 'Wait for it...'"
+            "text_overlay": "Interactive debate/curiosity hook under 6 words (e.g. '1 or 2? Drop below 👇', 'Who is at fault? 💀', 'Would you do this? 😭'). BANNED: 'Wait for it...', 'Watch what happens...'"
         }},
         {{
             "order": 3,
             "scene_type": "micro_payoff_loop",
             "title": "Payoff & Infinite Loop",
-            "text": "The hilarious punchline, ending with an incomplete phrase that grammatically leads into Scene 1. No goodbye, no subscribe. (12-18 words, 4-7 seconds)",
+            "text": "The hilarious punchline, ending with an incomplete phrase that grammatically leads into Scene 1. No goodbye, no subscribe. (5-10 words, 2-4 seconds)",
             "visual_prompt": "Hilarious reaction reveal video directly matching the punchline, vertical 9:16, comical comedic timing visual",
             "visual_type": "video",
             "text_overlay": "Engagement or brand watermark under 5 words (e.g. 'Tap ❤️ if you felt this', 'Stateside Smiles 😄')"
@@ -224,7 +231,7 @@ STRUCTURE (Output as JSON):
     ]
 }}
 
-TARGET: 45-65 words total across EXACTLY 3 scenes (18-25 seconds).
+TARGET: 20-35 words total across EXACTLY 3 scenes (8-12 seconds).
 CRITICAL: ONLY 3 SCENES. Hook -> Twist/Debate -> Payoff/Loop.
 visual_type: video (stock video footage for maximum engagement)
 

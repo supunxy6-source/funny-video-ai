@@ -198,3 +198,19 @@ SERIES_PILL_CONFIG = {
 # ── Intro/Outro (REMOVED — every second is content) ───
 INTRO_DURATION = 0.0
 OUTRO_DURATION = 0.0
+
+# ── Hook Frame Overlay (Scene 1 — Scroll-Stopper at t=0) ──
+# Larger, bolder text that appears at frame 0 of the first scene.
+# Designed to be visible even at thumbnail size in the Shorts feed
+# to stop the scroll before the viewer's thumb completes the swipe.
+HOOK_FRAME_CONFIG = {
+    "font_size": 80,              # Much larger than text_overlay (48px)
+    "font_color": "#FFFFFF",
+    "bg_color": "#FF1744DD",      # Vivid red, semi-transparent — proven scroll-stopper
+    "border_radius": 20,
+    "position_y": 350,            # Upper-third — first place eyes land on 9:16
+    "padding_x": 40,
+    "padding_y": 20,
+    "duration": 1.5,              # Only first 1.5 seconds
+    "start_time": 0.0,            # Frame 0 — no delay
+}

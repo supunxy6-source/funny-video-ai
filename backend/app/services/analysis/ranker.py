@@ -174,6 +174,38 @@ class StoryRanker:
             + WEIGHTS["viral_potential"] * viral_score
         )
 
+        # Series theme boost (entertainment mode) — favors top performing series
+        series_weight = 1.0
+        content_mode = getattr(settings, "content_mode", "entertainment")
+        if content_mode == "entertainment":
+            try:
+                from app.services.scriptwriter.entertainment_prompts import get_series_for_subreddit
+                subreddits_found = set()
+                for a in articles:
+                    kw_str = a.get("keywords") or ""
+                    if kw_str and isinstance(kw_str, str):
+                        try:
+                            kw_data = json.loads(kw_str)
+                            sub = kw_data.get("subreddit")
+                            if sub:
+                                subreddits_found.add(sub.lower())
+                        except Exception:
+                            pass
+                    url_str = a.get("url") or ""
+                    sub_match = re.search(r'/r/([^/]+)', url_str, re.IGNORECASE)
+                    if sub_match:
+                        subreddits_found.add(sub_match.group(1).lower())
+
+                for sub in subreddits_found:
+                    series = get_series_for_subreddit(sub)
+                    w = series.get("weight", 1.0)
+                    if w > series_weight:
+                        series_weight = w
+                
+                total *= series_weight
+            except Exception as e:
+                logger.debug(f"Series weight boost error: {e}")
+
         return {
             "cluster_id": cluster_id,
             "total_score": round(total, 4),
@@ -186,6 +218,7 @@ class StoryRanker:
                 "category": round(category_score, 3),
                 "coverage": round(coverage_score, 3),
                 "viral_potential": round(viral_score, 3),
+                "series_weight": round(series_weight, 2),
             },
             "top_headline": articles[0]["headline"] if articles else "",
         }
@@ -408,6 +441,8 @@ async def rank_stories() -> list[dict]:
                     "summary": a.summary,
                     "category": a.category,
                     "published_at": a.published_at,
+                    "keywords": a.keywords,
+                    "url": a.url,
                 }
                 for a in articles
             ]
